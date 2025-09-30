@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار teaching/interaction بعد الإصلاح</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1e1e1e;
+            color: #fff;
+        }
+        .test {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background: #2a2a2a;
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .pending { color: #fbbf24; }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <h1>اختبار teaching/interaction بعد الإصلاح النهائي</h1>
+
+    <div class="test">
+        <h2>اختبار 1: استخدام slideContent</h2>
+        <button onclick="testSlideContent()">اختبار</button>
+        <div id="test1" class="result"></div>
+    </div>
+
+    <div class="test">
+        <h2>اختبار 2: استخدام currentSlide (للتوافق)</h2>
+        <button onclick="testCurrentSlide()">اختبار</button>
+        <div id="test2" class="result"></div>
+    </div>
+
+    <div class="test">
+        <h2>اختبار 3: أنواع تفاعل مختلفة</h2>
+        <button onclick="testAllTypes()">اختبار جميع الأنواع</button>
+        <div id="test3" class="result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api/v1';
+        const LESSON_ID = 'LESSON_1758905299464_qjan5xlid';
+
+        function getToken() {
+            return localStorage.getItem('token') || prompt('أدخل Token:');
+        }
+
+        async function testSlideContent() {
+            const result = document.getElementById('test1');
+            result.textContent = 'جاري الاختبار...';
+            result.className = 'result pending';
+
+            try {
+                const response = await fetch(`${API_URL}/lessons/${LESSON_ID}/teaching/interaction`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}`
+                    },
+                    body: JSON.stringify({
+                        type: 'explain',
+                        slideContent: {
+                            type: 'content',
+                            title: 'اختبار slideContent',
+                            content: 'محتوى تجريبي'
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                result.textContent = `Status: ${response.status}
+${response.ok ? '✅ نجح' : '❌ فشل'}
+البيانات: ${JSON.stringify(data, null, 2)}`;
+                result.className = `result ${response.ok ? 'success' : 'error'}`;
+            } catch (error) {
+                result.textContent = `❌ خطأ: ${error.message}`;
+                result.className = 'result error';
+            }
+        }
+
+        async function testCurrentSlide() {
+            const result = document.getElementById('test2');
+            result.textContent = 'جاري الاختبار...';
+            result.className = 'result pending';
+
+            try {
+                const response = await fetch(`${API_URL}/lessons/${LESSON_ID}/teaching/interaction`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}`
+                    },
+                    body: JSON.stringify({
+                        type: 'more_detail',
+                        currentSlide: {  // استخدام currentSlide بدلاً من slideContent
+                            type: 'content',
+                            title: 'اختبار currentSlide',
+                            content: 'محتوى للتوافق'
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                result.textContent = `Status: ${response.status}
+${response.ok ? '✅ نجح' : '❌ فشل'}
+البيانات: ${JSON.stringify(data, null, 2)}`;
+                result.className = `result ${response.ok ? 'success' : 'error'}`;
+            } catch (error) {
+                result.textContent = `❌ خطأ: ${error.message}`;
+                result.className = 'result error';
+            }
+        }
+
+        async function testAllTypes() {
+            const result = document.getElementById('test3');
+            result.textContent = 'جاري اختبار جميع الأنواع...';
+            result.className = 'result pending';
+
+            const types = [
+                'explain', 'more_detail', 'example', 'problem',
+                'repeat', 'continue', 'stop', 'quiz', 'summary',
+                'motivate', 'simplify', 'application',
+                'unknown_type' // نوع غير معروف للاختبار
+            ];
+
+            let results = [];
+
+            for (const type of types) {
+                try {
+                    const response = await fetch(`${API_URL}/lessons/${LESSON_ID}/teaching/interaction`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${getToken()}`
+                        },
+                        body: JSON.stringify({
+                            type: type,
+                            slideContent: {
+                                type: 'content',
+                                title: `اختبار ${type}`,
+                                content: 'محتوى'
+                            }
+                        })
+                    });
+
+                    results.push({
+                        type: type,
+                        status: response.status,
+                        success: response.ok
+                    });
+                } catch (error) {
+                    results.push({
+                        type: type,
+                        status: 'error',
+                        success: false
+                    });
+                }
+            }
+
+            const successCount = results.filter(r => r.success).length;
+            const failedTypes = results.filter(r => !r.success).map(r => r.type);
+
+            result.textContent = `نتائج الاختبار:
+✅ نجح: ${successCount} من ${types.length}
+${failedTypes.length > 0 ? `❌ فشل: ${failedTypes.join(', ')}` : ''}
+
+التفاصيل:
+${results.map(r => `${r.type}: ${r.success ? '✅' : '❌'} (${r.status})`).join('\n')}`;
+
+            result.className = `result ${successCount === types.length ? 'success' : successCount > 0 ? 'pending' : 'error'}`;
+        }
+    </script>
+</body>
+</html>

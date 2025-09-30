@@ -1,0 +1,1918 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة معلمي التعليمية الذكية - واجهة الاختبار الشاملة</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Socket.io Client -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
+    <!-- KaTeX for Math Equations -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* Slide styles */
+        .slide-container {
+            min-height: 400px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 40px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .slide-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 30s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Chat message styles */
+        .message-user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+        }
+        
+        .message-assistant {
+            background: #f3f4f6;
+            color: #1f2937;
+            border-radius: 18px 18px 18px 4px;
+        }
+        
+        /* Loading animation */
+        .loading-dots {
+            display: inline-block;
+        }
+        
+        .loading-dots::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        /* Tab styles */
+        .tab-active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        /* Quiz option styles */
+        .quiz-option {
+            transition: all 0.3s ease;
+        }
+        
+        .quiz-option:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .quiz-option.correct {
+            background: #10b981;
+            color: white;
+        }
+        
+        .quiz-option.incorrect {
+            background: #ef4444;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-family-sans">
+
+<!-- Main Container -->
+<div id="app" class="min-h-screen">
+    
+    <!-- Header -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-reverse space-x-4">
+                    <i class="fas fa-graduation-cap text-3xl text-purple-600"></i>
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        منصة معلمي التعليمية الذكية
+                    </h1>
+                </div>
+                
+                <!-- User Info -->
+                <div id="userInfo" class="flex items-center space-x-reverse space-x-4">
+                    <div id="userDisplay" class="hidden">
+                        <span class="text-gray-600">مرحباً،</span>
+                        <span id="userName" class="font-semibold text-purple-600"></span>
+                        <span class="text-sm text-gray-500 mr-2">(<span id="userRole"></span>)</span>
+                        <button onclick="logout()" class="mr-4 px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
+                            <i class="fas fa-sign-out-alt ml-1"></i>
+                            خروج
+                        </button>
+                    </div>
+                    <div id="loginPrompt">
+                        <span class="text-gray-600">يرجى تسجيل الدخول</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="container mx-auto px-4 py-8">
+        
+        <!-- Authentication Section (Initially Visible) -->
+        <div id="authSection" class="max-w-4xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-xl p-8 fade-in">
+                <h2 class="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    مرحباً بك في منصة معلمي
+                </h2>
+                
+                <!-- Quick Actions -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    <button onclick="quickDemo()" class="p-6 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-xl hover:shadow-lg transition transform hover:scale-105">
+                        <i class="fas fa-rocket text-3xl mb-2"></i>
+                        <h3 class="text-xl font-bold">تجربة سريعة</h3>
+                        <p class="text-sm opacity-90">دخول بحساب تجريبي فوراً</p>
+                    </button>
+                    
+                    <button onclick="autoLogin()" class="p-6 bg-gradient-to-r from-purple-400 to-pink-500 text-white rounded-xl hover:shadow-lg transition transform hover:scale-105">
+                        <i class="fas fa-magic text-3xl mb-2"></i>
+                        <h3 class="text-xl font-bold">دخول تلقائي</h3>
+                        <p class="text-sm opacity-90">البحث عن حساب موجود</p>
+                    </button>
+                </div>
+
+                <!-- Login/Register Tabs -->
+                <div class="bg-gray-50 rounded-xl p-6">
+                    <div class="flex mb-6 border-b">
+                        <button onclick="switchAuthTab('login')" id="loginTab" class="flex-1 py-3 px-6 font-semibold transition tab-active rounded-t-lg">
+                            تسجيل الدخول
+                        </button>
+                        <button onclick="switchAuthTab('register')" id="registerTab" class="flex-1 py-3 px-6 font-semibold transition hover:bg-gray-100 rounded-t-lg">
+                            حساب جديد
+                        </button>
+                    </div>
+
+                    <!-- Login Form -->
+                    <div id="loginForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+                            <input type="email" id="loginEmail" value="student@test.com" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
+                            <input type="password" id="loginPassword" value="Test@123" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <button onclick="login()" class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition transform hover:scale-105 font-semibold">
+                            دخول
+                        </button>
+                    </div>
+
+                    <!-- Register Form -->
+                    <div id="registerForm" class="space-y-4 hidden">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">الاسم الأول</label>
+                                <input type="text" id="regFirstName" value="أحمد" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">الاسم الأخير</label>
+                                <input type="text" id="regLastName" value="محمد" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+                            <input type="email" id="regEmail" value="test@example.com" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
+                            <input type="password" id="regPassword" value="Test@123" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">الصف الدراسي</label>
+                            <select id="regGrade" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <option value="6" selected>الصف السادس</option>
+                                <option value="9">الصف التاسع</option>
+                                <option value="12">الصف الثاني عشر</option>
+                            </select>
+                        </div>
+                        <button onclick="register()" class="w-full py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition transform hover:scale-105 font-semibold">
+                            إنشاء حساب
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard (Hidden Initially) -->
+        <div id="mainDashboard" class="hidden">
+            
+            <!-- Navigation Tabs -->
+            <div class="bg-white rounded-xl shadow-lg mb-6 p-2">
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="switchTab('subjects')" id="subjectsTab" class="px-6 py-3 rounded-lg font-semibold transition hover:bg-purple-50 tab-active">
+                        <i class="fas fa-book ml-2"></i>المواد الدراسية
+                    </button>
+                    <button onclick="switchTab('chat')" id="chatTab" class="px-6 py-3 rounded-lg font-semibold transition hover:bg-purple-50">
+                        <i class="fas fa-robot ml-2"></i>المساعد الذكي
+                    </button>
+                    <button onclick="switchTab('quiz')" id="quizTab" class="px-6 py-3 rounded-lg font-semibold transition hover:bg-purple-50">
+                        <i class="fas fa-question-circle ml-2"></i>الاختبارات
+                    </button>
+                    <button onclick="switchTab('slides')" id="slidesTab" class="px-6 py-3 rounded-lg font-semibold transition hover:bg-purple-50">
+                        <i class="fas fa-presentation ml-2"></i>الشرائح التعليمية
+                    </button>
+                    <button onclick="switchTab('progress')" id="progressTab" class="px-6 py-3 rounded-lg font-semibold transition hover:bg-purple-50">
+                        <i class="fas fa-chart-line ml-2"></i>التقدم
+                    </button>
+                    <button onclick="switchTab('websocket')" id="websocketTab" class="px-6 py-3 rounded-lg font-semibold transition hover:bg-purple-50">
+                        <i class="fas fa-plug ml-2"></i>WebSocket
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Contents -->
+            
+            <!-- Subjects Tab -->
+            <div id="subjectsContent" class="fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Subjects List -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold mb-4 text-purple-600">
+                                <i class="fas fa-list ml-2"></i>المواد الدراسية
+                            </h3>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">اختر الصف</label>
+                                <select id="gradeFilter" onchange="loadSubjects()" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option value="6">الصف السادس</option>
+                                    <option value="9">الصف التاسع</option>
+                                    <option value="12">الصف الثاني عشر</option>
+                                </select>
+                            </div>
+                            <div id="subjectsList" class="space-y-2">
+                                <!-- Subjects will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Units & Lessons -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold mb-4 text-purple-600">
+                                <i class="fas fa-folder-open ml-2"></i>الوحدات والدروس
+                            </h3>
+                            <div id="unitsContainer" class="space-y-4">
+                                <div class="text-center text-gray-500 py-8">
+                                    <i class="fas fa-hand-pointer text-4xl mb-4"></i>
+                                    <p>اختر مادة دراسية لعرض الوحدات</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Lesson Content -->
+                        <div id="lessonContent" class="mt-6 bg-white rounded-xl shadow-lg p-6 hidden">
+                            <h3 class="text-xl font-bold mb-4 text-purple-600">
+                                <i class="fas fa-book-reader ml-2"></i>محتوى الدرس
+                            </h3>
+                            <div id="lessonDetails">
+                                <!-- Lesson content will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Tab -->
+            <div id="chatContent" class="hidden fade-in">
+                <div class="max-w-4xl mx-auto">
+                    <div class="bg-white rounded-xl shadow-lg">
+                        <!-- Chat Header -->
+                        <div class="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6 rounded-t-xl">
+                            <h3 class="text-2xl font-bold">
+                                <i class="fas fa-robot ml-2"></i>المساعد الذكي
+                            </h3>
+                            <p class="text-purple-100 mt-2">اسأل أي سؤال عن الدروس وسأساعدك في الفهم</p>
+                        </div>
+                        
+                        <!-- Chat Messages -->
+                        <div id="chatMessages" class="h-96 overflow-y-auto p-6 space-y-4 bg-gray-50">
+                            <div class="text-center text-gray-500">
+                                <i class="fas fa-comments text-4xl mb-4"></i>
+                                <p>مرحباً! كيف يمكنني مساعدتك اليوم؟</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Chat Input -->
+                        <div class="p-4 border-t">
+                            <div class="flex gap-2">
+                                <input type="text" id="chatInput" 
+                                    placeholder="اكتب سؤالك هنا..." 
+                                    onkeypress="if(event.key === 'Enter') sendMessage()"
+                                    class="flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <button onclick="sendMessage()" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Quick Actions -->
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <button onclick="sendQuickMessage('اشرح لي هذا الدرس')" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm hover:bg-purple-200 transition">
+                                    اشرح الدرس
+                                </button>
+                                <button onclick="sendQuickMessage('أعطني مثال')" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm hover:bg-purple-200 transition">
+                                    مثال
+                                </button>
+                                <button onclick="sendQuickMessage('ما هي النقاط المهمة؟')" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm hover:bg-purple-200 transition">
+                                    النقاط المهمة
+                                </button>
+                                <button onclick="sendQuickMessage('اختبرني')" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm hover:bg-purple-200 transition">
+                                    اختبرني
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Tab -->
+            <div id="quizContent" class="hidden fade-in">
+                <div class="max-w-4xl mx-auto">
+                    <div class="bg-white rounded-xl shadow-lg p-8">
+                        <h3 class="text-2xl font-bold mb-6 text-purple-600">
+                            <i class="fas fa-question-circle ml-2"></i>الاختبارات
+                        </h3>
+                        
+                        <!-- Quiz Start Section -->
+                        <div id="quizStart">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-xl mb-6">
+                                <h4 class="text-xl font-bold mb-2">ابدأ اختبار جديد</h4>
+                                <p>اختبر معلوماتك في الدرس الحالي</p>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">عدد الأسئلة</label>
+                                    <select id="questionCount" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                        <option value="5">5 أسئلة</option>
+                                        <option value="10" selected>10 أسئلة</option>
+                                        <option value="15">15 سؤال</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">الدرس</label>
+                                    <select id="quizLessonId" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                        <option value="">اختر الدرس</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <button onclick="startQuiz()" class="w-full py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition font-bold text-lg">
+                                <i class="fas fa-play ml-2"></i>ابدأ الاختبار
+                            </button>
+                        </div>
+                        
+                        <!-- Quiz Questions Section -->
+                        <div id="quizQuestions" class="hidden">
+                            <div class="mb-6">
+                                <div class="flex justify-between items-center mb-4">
+                                    <span class="text-lg font-semibold">السؤال <span id="currentQuestion">1</span> من <span id="totalQuestions">10</span></span>
+                                    <span class="text-lg font-semibold text-purple-600">النقاط: <span id="quizScore">0</span></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div id="quizProgress" class="bg-gradient-to-r from-purple-600 to-pink-600 h-3 rounded-full transition-all" style="width: 10%"></div>
+                                </div>
+                            </div>
+                            
+                            <div id="questionContainer" class="mb-6">
+                                <!-- Question will be loaded here -->
+                            </div>
+                            
+                            <div id="quizActions" class="flex justify-between">
+                                <button onclick="skipQuestion()" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition">
+                                    تخطي
+                                </button>
+                                <button onclick="nextQuestion()" id="nextQuestionBtn" class="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition" disabled>
+                                    السؤال التالي
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Quiz Results Section -->
+                        <div id="quizResults" class="hidden">
+                            <div class="text-center mb-8">
+                                <i class="fas fa-trophy text-6xl text-yellow-500 mb-4"></i>
+                                <h4 class="text-2xl font-bold mb-2">انتهى الاختبار!</h4>
+                                <p class="text-gray-600">إليك نتائجك</p>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-4 mb-8">
+                                <div class="bg-purple-100 p-4 rounded-xl text-center">
+                                    <p class="text-3xl font-bold text-purple-600" id="finalScore">0</p>
+                                    <p class="text-sm text-gray-600">النقاط</p>
+                                </div>
+                                <div class="bg-green-100 p-4 rounded-xl text-center">
+                                    <p class="text-3xl font-bold text-green-600" id="correctAnswers">0</p>
+                                    <p class="text-sm text-gray-600">إجابات صحيحة</p>
+                                </div>
+                                <div class="bg-blue-100 p-4 rounded-xl text-center">
+                                    <p class="text-3xl font-bold text-blue-600" id="quizPercentage">0%</p>
+                                    <p class="text-sm text-gray-600">النسبة المئوية</p>
+                                </div>
+                            </div>
+                            
+                            <button onclick="resetQuiz()" class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition font-bold">
+                                <i class="fas fa-redo ml-2"></i>اختبار جديد
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slides Tab -->
+            <div id="slidesContent" class="hidden fade-in">
+                <div class="max-w-5xl mx-auto">
+                    <div class="bg-white rounded-xl shadow-lg p-8">
+                        <h3 class="text-2xl font-bold mb-6 text-purple-600">
+                            <i class="fas fa-presentation ml-2"></i>الشرائح التعليمية
+                        </h3>
+                        
+                        <!-- Slide Controls -->
+                        <div class="mb-6">
+                            <div class="flex gap-4 mb-4">
+                                <select id="slideLessonSelect" class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option value="">اختر الدرس</option>
+                                </select>
+                                <button onclick="generateSlides()" class="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition">
+                                    <i class="fas fa-magic ml-2"></i>توليد الشرائح
+                                </button>
+                                <button onclick="generateWithVoice()" class="px-6 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition">
+                                    <i class="fas fa-microphone ml-2"></i>مع الصوت
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Slide Display -->
+                        <div id="slideContainer" class="slide-container">
+                            <div class="text-center relative z-10">
+                                <i class="fas fa-chalkboard-teacher text-6xl mb-4 opacity-50"></i>
+                                <h4 class="text-2xl font-bold mb-2">شرائح تعليمية تفاعلية</h4>
+                                <p>اختر درساً لتوليد الشرائح التعليمية</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Slide Navigation -->
+                        <div id="slideNavigation" class="hidden mt-6">
+                            <div class="flex justify-between items-center">
+                                <button onclick="previousSlide()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition">
+                                    <i class="fas fa-chevron-right ml-2"></i>السابق
+                                </button>
+                                <span class="font-semibold">الشريحة <span id="currentSlide">1</span> من <span id="totalSlides">1</span></span>
+                                <button onclick="nextSlide()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition">
+                                    التالي<i class="fas fa-chevron-left mr-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Tab -->
+            <div id="progressContent" class="hidden fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Overall Progress -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold mb-4 text-purple-600">
+                                <i class="fas fa-chart-pie ml-2"></i>التقدم العام
+                            </h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-600">الدروس المكتملة</span>
+                                        <span class="text-sm font-semibold">0/20</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-3">
+                                        <div class="bg-gradient-to-r from-purple-600 to-pink-600 h-3 rounded-full" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4 mt-6">
+                                    <div class="bg-purple-100 p-3 rounded-lg text-center">
+                                        <p class="text-2xl font-bold text-purple-600">0</p>
+                                        <p class="text-xs text-gray-600">النقاط</p>
+                                    </div>
+                                    <div class="bg-green-100 p-3 rounded-lg text-center">
+                                        <p class="text-2xl font-bold text-green-600">0</p>
+                                        <p class="text-xs text-gray-600">أيام متتالية</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quiz History -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold mb-4 text-purple-600">
+                                <i class="fas fa-history ml-2"></i>سجل الاختبارات
+                            </h3>
+                            <div id="quizHistory" class="space-y-2">
+                                <div class="text-center text-gray-500 py-8">
+                                    <i class="fas fa-clipboard-list text-4xl mb-4"></i>
+                                    <p>لا توجد اختبارات سابقة</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WebSocket Tab -->
+            <div id="websocketContent" class="hidden fade-in">
+                <div class="max-w-4xl mx-auto">
+                    <div class="bg-white rounded-xl shadow-lg p-8">
+                        <h3 class="text-2xl font-bold mb-6 text-purple-600">
+                            <i class="fas fa-plug ml-2"></i>WebSocket Test
+                        </h3>
+                        
+                        <!-- Connection Status -->
+                        <div class="mb-6 p-4 rounded-lg" id="wsStatus">
+                            <div class="flex items-center">
+                                <div id="wsStatusIcon" class="w-3 h-3 bg-red-500 rounded-full ml-2"></div>
+                                <span id="wsStatusText">غير متصل</span>
+                            </div>
+                        </div>
+                        
+                        <!-- WebSocket Controls -->
+                        <div class="space-y-4">
+                            <button onclick="connectWebSocket()" class="w-full py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition">
+                                <i class="fas fa-link ml-2"></i>اتصال WebSocket
+                            </button>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <button onclick="testSlideGeneration()" class="py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition">
+                                    اختبار توليد شريحة
+                                </button>
+                                <button onclick="testTeachingAssistant()" class="py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                                    اختبار المساعد التعليمي
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- WebSocket Log -->
+                        <div class="mt-6">
+                            <h4 class="font-semibold mb-2">سجل الأحداث</h4>
+                            <div id="wsLog" class="bg-gray-900 text-green-400 p-4 rounded-lg h-64 overflow-y-auto font-mono text-sm">
+                                <div>WebSocket Log...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div id="loadingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl p-8 text-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
+        <p class="text-lg font-semibold">جاري التحميل<span class="loading-dots"></span></p>
+    </div>
+</div>
+
+<script>
+// ============= CONFIGURATION =============
+const API_BASE = 'http://localhost:3000/api/v1';
+const WS_URL = 'ws://localhost:3000';
+let TOKEN = localStorage.getItem('jwt_token') || '';
+let socket = null;
+let currentUser = null;
+let currentLesson = null;
+let currentSubject = null;
+let currentSlides = [];
+let currentSlideIndex = 0;
+let quizSession = null;
+let quizQuestions = [];
+let currentQuestionIndex = 0;
+
+// ============= INITIALIZATION =============
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 منصة معلمي جاهزة للعمل!');
+    
+    // Auto login if token exists
+    if (TOKEN) {
+        console.log('🔑 Found existing token, attempting auto-login...');
+        autoLoginWithToken();
+    }
+});
+
+// ============= API HELPER =============
+async function apiRequest(endpoint, options = {}) {
+    const url = `${API_BASE}${endpoint}`;
+    
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    
+    if (TOKEN) {
+        headers['Authorization'] = `Bearer ${TOKEN}`;
+    }
+    
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error?.message || 'Request failed');
+        }
+        
+        return data;
+    } catch (error) {
+        console.error('API Error:', error);
+        showNotification(error.message, 'error');
+        throw error;
+    }
+}
+
+// ============= AUTHENTICATION =============
+function switchAuthTab(tab) {
+    if (tab === 'login') {
+        document.getElementById('loginForm').classList.remove('hidden');
+        document.getElementById('registerForm').classList.add('hidden');
+        document.getElementById('loginTab').classList.add('tab-active');
+        document.getElementById('registerTab').classList.remove('tab-active');
+    } else {
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.remove('hidden');
+        document.getElementById('loginTab').classList.remove('tab-active');
+        document.getElementById('registerTab').classList.add('tab-active');
+    }
+}
+
+async function quickDemo() {
+    showLoading();
+    
+    // Try common test accounts
+    const testAccounts = [
+        { email: 'student@test.com', password: 'Test@123' },
+        { email: 'student@test.com', password: 'Test' },
+        { email: 'dev@test.com', password: 'Dev@123' },
+        { email: 'dev@test.com', password: 'Dev' }
+    ];
+    
+    for (const account of testAccounts) {
+        try {
+            const response = await apiRequest('/auth/login', {
+                method: 'POST',
+                body: JSON.stringify(account)
+            });
+            
+            if (response.success) {
+                TOKEN = response.data.token;
+                localStorage.setItem('jwt_token', TOKEN);
+                currentUser = response.data.user;
+                updateUI();
+                hideLoading();
+                showNotification('تم الدخول بنجاح!', 'success');
+                
+                // Auto connect WebSocket
+                setTimeout(connectWebSocket, 1000);
+                return;
+            }
+        } catch (error) {
+            // Continue trying
+        }
+    }
+    
+    // If all fail, create new account
+    const newAccount = {
+        email: `demo${Date.now()}@test.com`,
+        password: 'Demo@123',
+        firstName: 'مستخدم',
+        lastName: 'تجريبي',
+        grade: 6
+    };
+    
+    try {
+        const response = await apiRequest('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify(newAccount)
+        });
+        
+        TOKEN = response.data.token;
+        localStorage.setItem('jwt_token', TOKEN);
+        currentUser = response.data.user;
+        updateUI();
+        showNotification('تم إنشاء حساب تجريبي جديد!', 'success');
+        
+        // Auto connect WebSocket
+        setTimeout(connectWebSocket, 1000);
+    } catch (error) {
+        showNotification('فشل إنشاء الحساب التجريبي', 'error');
+    }
+    
+    hideLoading();
+}
+
+async function autoLogin() {
+    showLoading();
+    
+    // Try to login with existing test accounts
+    const accounts = [
+        { email: 'student@test.com', password: 'Test' },
+        { email: 'dev@test.com', password: 'Dev' },
+        { email: 'test@example.com', password: 'Test' },
+        { email: 'test@test.com', password: 'Test' },
+        { email: 'student@test.com', password: 'Test@123' },
+        { email: 'dev@test.com', password: 'Dev@123' }
+    ];
+    
+    for (const account of accounts) {
+        try {
+            const response = await apiRequest('/auth/login', {
+                method: 'POST',
+                body: JSON.stringify(account)
+            });
+            
+            if (response.success) {
+                TOKEN = response.data.token;
+                localStorage.setItem('jwt_token', TOKEN);
+                currentUser = response.data.user;
+                updateUI();
+                hideLoading();
+                showNotification(`تم الدخول بحساب: ${account.email}`, 'success');
+                
+                // Auto connect WebSocket
+                setTimeout(connectWebSocket, 1000);
+                return;
+            }
+        } catch (error) {
+            console.log(`Failed with ${account.email}`);
+        }
+    }
+    
+    hideLoading();
+    showNotification('لم يتم العثور على حساب. يرجى إنشاء حساب جديد.', 'warning');
+}
+
+async function autoLoginWithToken() {
+    try {
+        const response = await apiRequest('/auth/me');
+        currentUser = response.data;
+        updateUI();
+        showNotification('تم الدخول تلقائياً!', 'success');
+        
+        // Auto connect WebSocket
+        setTimeout(connectWebSocket, 1000);
+    } catch (error) {
+        console.error('Token validation failed:', error);
+        TOKEN = '';
+        localStorage.removeItem('jwt_token');
+    }
+}
+
+async function login() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+        showNotification('يرجى ملء جميع الحقول', 'error');
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        const response = await apiRequest('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password })
+        });
+        
+        TOKEN = response.data.token;
+        localStorage.setItem('jwt_token', TOKEN);
+        currentUser = response.data.user;
+        updateUI();
+        showNotification('تم تسجيل الدخول بنجاح!', 'success');
+        
+        // Auto connect WebSocket
+        setTimeout(connectWebSocket, 1000);
+    } catch (error) {
+        showNotification('فشل تسجيل الدخول. تحقق من البيانات.', 'error');
+    }
+    
+    hideLoading();
+}
+
+async function register() {
+    const data = {
+        email: document.getElementById('regEmail').value,
+        password: document.getElementById('regPassword').value,
+        firstName: document.getElementById('regFirstName').value,
+        lastName: document.getElementById('regLastName').value,
+        grade: parseInt(document.getElementById('regGrade').value)
+    };
+    
+    if (!data.email || !data.password || !data.firstName || !data.lastName) {
+        showNotification('يرجى ملء جميع الحقول', 'error');
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        const response = await apiRequest('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        
+        TOKEN = response.data.token;
+        localStorage.setItem('jwt_token', TOKEN);
+        currentUser = response.data.user;
+        updateUI();
+        showNotification('تم إنشاء الحساب بنجاح!', 'success');
+        
+        // Auto connect WebSocket
+        setTimeout(connectWebSocket, 1000);
+    } catch (error) {
+        showNotification('فشل إنشاء الحساب. ربما البريد مستخدم بالفعل.', 'error');
+    }
+    
+    hideLoading();
+}
+
+function logout() {
+    TOKEN = '';
+    currentUser = null;
+    localStorage.removeItem('jwt_token');
+    
+    if (socket) {
+        socket.disconnect();
+        socket = null;
+    }
+    
+    updateUI();
+    showNotification('تم تسجيل الخروج', 'info');
+}
+
+function updateUI() {
+    if (currentUser) {
+        // Show dashboard, hide auth
+        document.getElementById('authSection').classList.add('hidden');
+        document.getElementById('mainDashboard').classList.remove('hidden');
+        
+        // Update user display
+        document.getElementById('userDisplay').classList.remove('hidden');
+        document.getElementById('loginPrompt').classList.add('hidden');
+        document.getElementById('userName').textContent = currentUser.firstName + ' ' + currentUser.lastName;
+        document.getElementById('userRole').textContent = currentUser.role === 'STUDENT' ? 'طالب' : 'معلم';
+        
+        // Load initial data
+        loadSubjects();
+        loadQuizHistory();
+    } else {
+        // Show auth, hide dashboard
+        document.getElementById('authSection').classList.remove('hidden');
+        document.getElementById('mainDashboard').classList.add('hidden');
+        
+        // Update user display
+        document.getElementById('userDisplay').classList.add('hidden');
+        document.getElementById('loginPrompt').classList.remove('hidden');
+    }
+}
+
+// ============= TAB NAVIGATION =============
+function switchTab(tabName) {
+    // Hide all contents
+    const contents = ['subjects', 'chat', 'quiz', 'slides', 'progress', 'websocket'];
+    contents.forEach(name => {
+        document.getElementById(`${name}Content`).classList.add('hidden');
+        document.getElementById(`${name}Tab`).classList.remove('tab-active');
+    });
+    
+    // Show selected content
+    document.getElementById(`${tabName}Content`).classList.remove('hidden');
+    document.getElementById(`${tabName}Tab`).classList.add('tab-active');
+}
+
+// ============= SUBJECTS & LESSONS =============
+async function loadSubjects() {
+    const grade = document.getElementById('gradeFilter').value;
+    
+    try {
+        const response = await apiRequest(`/content/subjects?grade=${grade}`);
+        const subjects = response.data;
+        
+        const container = document.getElementById('subjectsList');
+        container.innerHTML = '';
+        
+        subjects.forEach(subject => {
+            const card = document.createElement('div');
+            card.className = 'p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg cursor-pointer hover:shadow-md transition';
+            card.onclick = () => selectSubject(subject);
+            card.innerHTML = `
+                <div class="flex items-center">
+                    <span class="text-2xl ml-3">${subject.icon || '📚'}</span>
+                    <div>
+                        <h4 class="font-semibold">${subject.nameAr || subject.name}</h4>
+                        <p class="text-sm text-gray-600">الصف ${subject.grade}</p>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+        
+        // Update lesson selects
+        updateLessonSelects();
+    } catch (error) {
+        console.error('Failed to load subjects:', error);
+    }
+}
+
+async function selectSubject(subject) {
+    currentSubject = subject;
+    
+    const container = document.getElementById('unitsContainer');
+    container.innerHTML = `
+        <h4 class="text-lg font-semibold mb-3">${subject.nameAr || subject.name}</h4>
+        <div class="text-center text-gray-500 py-8">
+            <i class="fas fa-spinner fa-spin text-4xl mb-4"></i>
+            <p>جاري تحميل الدروس...</p>
+        </div>
+    `;
+    
+    try {
+        // Get all lessons and filter by subject
+        const response = await apiRequest('/lessons');
+        const allLessons = response.data.lessons || [];
+        
+        // Group lessons by unit
+        const unitMap = new Map();
+        
+        allLessons.forEach(lesson => {
+            if (lesson.unit && lesson.unit.subject) {
+                // Check if lesson belongs to this subject
+                const lessonSubject = lesson.unit.subject;
+                if (lessonSubject.id === subject.id || 
+                    lessonSubject.name === subject.name ||
+                    lessonSubject.nameAr === subject.nameAr) {
+                    
+                    const unitId = lesson.unit.id;
+                    if (!unitMap.has(unitId)) {
+                        unitMap.set(unitId, {
+                            unit: lesson.unit,
+                            lessons: []
+                        });
+                    }
+                    unitMap.get(unitId).lessons.push(lesson);
+                }
+            }
+        });
+        
+        container.innerHTML = `
+            <h4 class="text-lg font-semibold mb-3">${subject.nameAr || subject.name}</h4>
+        `;
+        
+        if (unitMap.size === 0) {
+            container.innerHTML += `
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-folder-open text-4xl mb-4"></i>
+                    <p>لا توجد دروس في هذه المادة</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Display units and their lessons
+        unitMap.forEach((data, unitId) => {
+            const unitDiv = document.createElement('div');
+            unitDiv.className = 'mb-4 bg-gray-50 rounded-lg p-4';
+            
+            const unitTitle = data.unit.titleAr || data.unit.title;
+            unitDiv.innerHTML = `
+                <h5 class="font-semibold mb-2 text-purple-600">
+                    <i class="fas fa-book ml-2"></i>${unitTitle}
+                </h5>
+                <div class="space-y-2">
+            `;
+            
+            // Add lessons to unit
+            data.lessons.forEach(lesson => {
+                const lessonElement = document.createElement('div');
+                lessonElement.className = 'p-3 bg-white rounded-lg hover:shadow-md transition cursor-pointer flex justify-between items-center';
+                lessonElement.onclick = () => selectLesson(lesson);
+                lessonElement.innerHTML = `
+                    <div>
+                        <h6 class="font-medium">${lesson.titleAr || lesson.title}</h6>
+                        <p class="text-sm text-gray-500">
+                            ${lesson.duration ? `المدة: ${lesson.duration} دقيقة` : ''}
+                            ${lesson.difficulty ? ` - ${lesson.difficulty === 'EASY' ? 'سهل' : lesson.difficulty === 'MEDIUM' ? 'متوسط' : 'صعب'}` : ''}
+                        </p>
+                    </div>
+                    <i class="fas fa-arrow-left text-purple-600"></i>
+                `;
+                unitDiv.appendChild(lessonElement);
+            });
+            
+            unitDiv.innerHTML += '</div>';
+            container.appendChild(unitDiv);
+        });
+        
+        // Update selects for quiz and slides
+        updateLessonSelectsFromSubject(allLessons, subject);
+        
+    } catch (error) {
+        console.error('Failed to load lessons:', error);
+        container.innerHTML = `
+            <h4 class="text-lg font-semibold mb-3">${subject.nameAr || subject.name}</h4>
+            <div class="text-center text-gray-500 py-8">
+                <i class="fas fa-exclamation-circle text-4xl mb-4"></i>
+                <p>حدث خطأ في تحميل الدروس</p>
+            </div>
+        `;
+    }
+}
+
+function updateLessonSelectsFromSubject(lessons, subject) {
+    // Filter lessons for current subject
+    const subjectLessons = lessons.filter(lesson => {
+        if (lesson.unit && lesson.unit.subject) {
+            const lessonSubject = lesson.unit.subject;
+            return lessonSubject.id === subject.id || 
+                   lessonSubject.name === subject.name ||
+                   lessonSubject.nameAr === subject.nameAr;
+        }
+        return false;
+    });
+    
+    // Update slide lesson select
+    const slideSelect = document.getElementById('slideLessonSelect');
+    slideSelect.innerHTML = '<option value="">اختر الدرس</option>';
+    
+    // Update quiz lesson select
+    const quizSelect = document.getElementById('quizLessonId');
+    quizSelect.innerHTML = '<option value="">اختر الدرس</option>';
+    
+    subjectLessons.forEach(lesson => {
+        const option = `<option value="${lesson.id}">${lesson.titleAr || lesson.title}</option>`;
+        slideSelect.innerHTML += option;
+        quizSelect.innerHTML += option;
+    });
+}
+
+async function loadUnitLessons(unitId) {
+    try {
+        // Try multiple endpoints to get lessons
+        let lessons = [];
+        
+        // First try the direct unit lessons endpoint
+        try {
+            const response = await apiRequest(`/content/units/${unitId}/lessons`);
+            if (response.data) lessons = response.data;
+        } catch (e) {
+            console.log('Standard unit lessons endpoint failed');
+        }
+        
+        // If no lessons, try getting all lessons and filter
+        if (lessons.length === 0) {
+            try {
+                const allLessonsResponse = await apiRequest('/lessons');
+                const allLessons = allLessonsResponse.data.lessons || [];
+                lessons = allLessons.filter(lesson => lesson.unitId === unitId);
+            } catch (e) {
+                console.log('Could not filter lessons by unit');
+            }
+        }
+        
+        const container = document.getElementById(`unit-${unitId}-lessons`);
+        
+        if (lessons.length === 0) {
+            container.innerHTML = '<p class="text-sm text-gray-500 italic">لا توجد دروس</p>';
+            return;
+        }
+        
+        lessons.forEach(lesson => {
+            const lessonDiv = document.createElement('div');
+            lessonDiv.className = 'p-3 bg-white rounded-lg hover:shadow-md transition cursor-pointer flex justify-between items-center';
+            lessonDiv.onclick = () => selectLesson(lesson);
+            lessonDiv.innerHTML = `
+                <div>
+                    <h6 class="font-medium">${lesson.titleAr || lesson.title}</h6>
+                    <p class="text-sm text-gray-500">المدة: ${lesson.duration || 45} دقيقة</p>
+                </div>
+                <i class="fas fa-arrow-left text-purple-600"></i>
+            `;
+            container.appendChild(lessonDiv);
+        });
+    } catch (error) {
+        console.error('Failed to load lessons:', error);
+        const container = document.getElementById(`unit-${unitId}-lessons`);
+        if (container) {
+            container.innerHTML = '<p class="text-sm text-red-500 italic">فشل تحميل الدروس</p>';
+        }
+    }
+}
+
+async function selectLesson(lesson) {
+    currentLesson = lesson;
+    
+    try {
+        // Try to get full lesson content
+        let content = null;
+        
+        // First try the standard content endpoint
+        try {
+            const response = await apiRequest(`/content/lessons/${lesson.id}`);
+            if (response.data && response.data.content) {
+                content = response.data.content;
+            }
+        } catch (e) {
+            console.log('Content endpoint failed, trying alternate');
+        }
+        
+        // If no content yet, try lessons endpoint
+        if (!content) {
+            try {
+                const response = await apiRequest(`/lessons/${lesson.id}/content`);
+                if (response.data) {
+                    content = response.data;
+                }
+            } catch (e) {
+                console.log('Alternate content endpoint also failed');
+            }
+        }
+        
+        const container = document.getElementById('lessonDetails');
+        container.innerHTML = `
+            <h4 class="text-xl font-bold mb-4">${lesson.titleAr || lesson.title}</h4>
+            <div class="prose prose-lg max-w-none">
+                ${content ? `
+                    <div class="mb-6">
+                        <h5 class="text-lg font-semibold mb-2 text-purple-600">الملخص</h5>
+                        <p>${content.summary || lesson.summary || 'لا يوجد ملخص'}</p>
+                    </div>
+                    
+                    ${(content.keyPoints && content.keyPoints.length > 0) || lesson.keyPoints ? `
+                        <div class="mb-6">
+                            <h5 class="text-lg font-semibold mb-2 text-purple-600">النقاط الرئيسية</h5>
+                            <ul class="list-disc list-inside space-y-1">
+                                ${content.keyPoints ? 
+                                    content.keyPoints.map(point => `<li>${point}</li>`).join('') :
+                                    (typeof lesson.keyPoints === 'string' ? 
+                                        JSON.parse(lesson.keyPoints).map(point => `<li>${point}</li>`).join('') : 
+                                        lesson.keyPoints.map(point => `<li>${point}</li>`).join(''))
+                                }
+                            </ul>
+                        </div>
+                    ` : ''}
+                    
+                    ${content.fullText ? `
+                        <div class="mb-6">
+                            <h5 class="text-lg font-semibold mb-2 text-purple-600">المحتوى الكامل</h5>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <p class="whitespace-pre-line">${content.fullText}</p>
+                            </div>
+                        </div>
+                    ` : ''}
+                ` : `
+                    <div class="mb-6">
+                        <h5 class="text-lg font-semibold mb-2 text-purple-600">معلومات الدرس</h5>
+                        <p>${lesson.description || 'درس في ' + (lesson.unit?.subject?.nameAr || lesson.unit?.subject?.name || 'المادة')}</p>
+                        ${lesson.keyPoints ? `
+                            <div class="mt-4">
+                                <h6 class="font-semibold mb-2">النقاط الرئيسية:</h6>
+                                <ul class="list-disc list-inside space-y-1">
+                                    ${(typeof lesson.keyPoints === 'string' ? 
+                                        JSON.parse(lesson.keyPoints) : 
+                                        lesson.keyPoints).map(point => `<li>${point}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `}
+            </div>
+            
+            <div class="mt-6 flex gap-4">
+                <button onclick="generateSlidesForLesson('${lesson.id}')" class="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition">
+                    <i class="fas fa-presentation ml-2"></i>عرض الشرائح
+                </button>
+                <button onclick="startQuizForLesson('${lesson.id}')" class="px-6 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition">
+                    <i class="fas fa-question-circle ml-2"></i>اختبار سريع
+                </button>
+                <button onclick="startChatAboutLesson('${lesson.id}')" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition">
+                    <i class="fas fa-robot ml-2"></i>اسأل المساعد
+                </button>
+            </div>
+        `;
+        
+        document.getElementById('lessonContent').classList.remove('hidden');
+    } catch (error) {
+        console.error('Failed to load lesson content:', error);
+        document.getElementById('lessonDetails').innerHTML = `
+            <div class="text-center text-gray-500 py-8">
+                <i class="fas fa-exclamation-circle text-4xl mb-4"></i>
+                <p>فشل تحميل محتوى الدرس</p>
+            </div>
+        `;
+        document.getElementById('lessonContent').classList.remove('hidden');
+    }
+}
+
+// New function to start chat about specific lesson
+function startChatAboutLesson(lessonId) {
+    currentLesson = { id: lessonId };
+    switchTab('chat');
+    sendQuickMessage('اشرح لي هذا الدرس بالتفصيل');
+}
+
+// ============= CHAT FUNCTIONALITY =============
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    if (!message) return;
+    
+    // Add user message to chat
+    addChatMessage(message, 'user');
+    input.value = '';
+    
+    // Show typing indicator
+    const typingId = addTypingIndicator();
+    
+    try {
+        const response = await apiRequest('/chat/message', {
+            method: 'POST',
+            body: JSON.stringify({
+                message,
+                lessonId: currentLesson?.id,
+                context: {
+                    language: 'ar'
+                }
+            })
+        });
+        
+        // Remove typing indicator
+        removeTypingIndicator(typingId);
+        
+        // Add AI response
+        addChatMessage(response.data.message, 'assistant');
+        
+        // Add suggestions if available
+        if (response.data.followUp && response.data.followUp.length > 0) {
+            addChatSuggestions(response.data.followUp);
+        }
+    } catch (error) {
+        removeTypingIndicator(typingId);
+        addChatMessage('عذراً، حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.', 'assistant');
+    }
+}
+
+function sendQuickMessage(text) {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+}
+
+function addChatMessage(message, role) {
+    const container = document.getElementById('chatMessages');
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `flex ${role === 'user' ? 'justify-start' : 'justify-end'} fade-in`;
+    
+    const bubble = document.createElement('div');
+    bubble.className = `max-w-md px-4 py-3 ${role === 'user' ? 'message-user' : 'message-assistant'}`;
+    bubble.textContent = message;
+    
+    messageDiv.appendChild(bubble);
+    container.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+}
+
+function addTypingIndicator() {
+    const id = 'typing-' + Date.now();
+    const container = document.getElementById('chatMessages');
+    
+    const typingDiv = document.createElement('div');
+    typingDiv.id = id;
+    typingDiv.className = 'flex justify-end fade-in';
+    typingDiv.innerHTML = `
+        <div class="max-w-md px-4 py-3 message-assistant">
+            <span class="loading-dots">يكتب</span>
+        </div>
+    `;
+    
+    container.appendChild(typingDiv);
+    container.scrollTop = container.scrollHeight;
+    
+    return id;
+}
+
+function removeTypingIndicator(id) {
+    const element = document.getElementById(id);
+    if (element) element.remove();
+}
+
+function addChatSuggestions(suggestions) {
+    const container = document.getElementById('chatMessages');
+    
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.className = 'flex flex-wrap gap-2 justify-center mt-4 fade-in';
+    
+    suggestions.forEach(suggestion => {
+        const button = document.createElement('button');
+        button.className = 'px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm hover:bg-purple-200 transition';
+        button.textContent = suggestion;
+        button.onclick = () => sendQuickMessage(suggestion);
+        suggestionsDiv.appendChild(button);
+    });
+    
+    container.appendChild(suggestionsDiv);
+    container.scrollTop = container.scrollHeight;
+}
+
+// ============= QUIZ FUNCTIONALITY =============
+async function startQuiz() {
+    const lessonId = document.getElementById('quizLessonId').value || currentLesson?.id;
+    const questionCount = parseInt(document.getElementById('questionCount').value);
+    
+    if (!lessonId) {
+        showNotification('يرجى اختيار الدرس أولاً', 'error');
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        const response = await apiRequest('/quiz/start', {
+            method: 'POST',
+            body: JSON.stringify({
+                lessonId,
+                questionCount
+            })
+        });
+        
+        quizSession = response.data;
+        quizQuestions = response.data.questions;
+        currentQuestionIndex = 0;
+        
+        // Show quiz questions section
+        document.getElementById('quizStart').classList.add('hidden');
+        document.getElementById('quizQuestions').classList.remove('hidden');
+        document.getElementById('quizResults').classList.add('hidden');
+        
+        // Display first question
+        displayQuestion();
+    } catch (error) {
+        showNotification('فشل بدء الاختبار', 'error');
+    }
+    
+    hideLoading();
+}
+
+function displayQuestion() {
+    if (currentQuestionIndex >= quizQuestions.length) {
+        completeQuiz();
+        return;
+    }
+    
+    const question = quizQuestions[currentQuestionIndex];
+    const container = document.getElementById('questionContainer');
+    
+    // Update progress
+    document.getElementById('currentQuestion').textContent = currentQuestionIndex + 1;
+    document.getElementById('totalQuestions').textContent = quizQuestions.length;
+    document.getElementById('quizProgress').style.width = `${((currentQuestionIndex + 1) / quizQuestions.length) * 100}%`;
+    
+    // Display question
+    container.innerHTML = `
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold mb-4">${question.question}</h4>
+            ${question.type === 'MCQ' && question.options ? `
+                <div class="space-y-3">
+                    ${question.options.map((option, index) => `
+                        <div class="quiz-option p-4 bg-gray-100 rounded-lg cursor-pointer" onclick="selectAnswer(${index})">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="answer" value="${index}" class="ml-3">
+                                <span>${option}</span>
+                            </label>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : `
+                <input type="text" id="textAnswer" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="اكتب إجابتك هنا...">
+            `}
+        </div>
+    `;
+    
+    // Reset next button
+    document.getElementById('nextQuestionBtn').disabled = true;
+}
+
+async function selectAnswer(index) {
+    const question = quizQuestions[currentQuestionIndex];
+    
+    // Submit answer to backend
+    try {
+        const response = await apiRequest('/quiz/answer', {
+            method: 'POST',
+            body: JSON.stringify({
+                attemptId: quizSession.attemptId,
+                questionId: question.id,
+                answer: index.toString(),
+                timeSpent: 10 // Mock time
+            })
+        });
+        
+        // Show feedback
+        const options = document.querySelectorAll('.quiz-option');
+        if (response.data.isCorrect) {
+            options[index].classList.add('correct');
+            updateScore(question.points);
+        } else {
+            options[index].classList.add('incorrect');
+            // Show correct answer
+            if (question.correctAnswer !== undefined) {
+                options[question.correctAnswer].classList.add('correct');
+            }
+        }
+        
+        // Enable next button
+        document.getElementById('nextQuestionBtn').disabled = false;
+    } catch (error) {
+        console.error('Failed to submit answer:', error);
+    }
+}
+
+function nextQuestion() {
+    currentQuestionIndex++;
+    displayQuestion();
+}
+
+function skipQuestion() {
+    currentQuestionIndex++;
+    displayQuestion();
+}
+
+async function completeQuiz() {
+    if (!quizSession) return;
+    
+    showLoading();
+    
+    try {
+        const response = await apiRequest(`/quiz/complete/${quizSession.attemptId}`, {
+            method: 'POST'
+        });
+        
+        const results = response.data;
+        
+        // Show results
+        document.getElementById('quizQuestions').classList.add('hidden');
+        document.getElementById('quizResults').classList.remove('hidden');
+        
+        document.getElementById('finalScore').textContent = results.score || 0;
+        document.getElementById('correctAnswers').textContent = results.correctAnswers || 0;
+        document.getElementById('quizPercentage').textContent = `${results.percentage || 0}%`;
+        
+        // Reload quiz history
+        loadQuizHistory();
+    } catch (error) {
+        showNotification('فشل إكمال الاختبار', 'error');
+    }
+    
+    hideLoading();
+}
+
+function resetQuiz() {
+    document.getElementById('quizStart').classList.remove('hidden');
+    document.getElementById('quizQuestions').classList.add('hidden');
+    document.getElementById('quizResults').classList.add('hidden');
+    
+    quizSession = null;
+    quizQuestions = [];
+    currentQuestionIndex = 0;
+}
+
+function updateScore(points) {
+    const scoreElement = document.getElementById('quizScore');
+    const currentScore = parseInt(scoreElement.textContent);
+    scoreElement.textContent = currentScore + points;
+}
+
+async function loadQuizHistory() {
+    // Skip quiz history for now due to validation issues
+    console.log('Quiz history skipped due to validation issues');
+    return;
+}
+        
+async function loadQuizHistory() {
+    // Skip quiz history for now due to validation issues
+    console.log('Quiz history skipped due to validation issues');
+    const container = document.getElementById('quizHistory');
+    if (container) {
+        container.innerHTML = `
+            <div class="text-center text-gray-500 py-8">
+                <i class="fas fa-clipboard-list text-4xl mb-4"></i>
+                <p>لا توجد اختبارات سابقة</p>
+            </div>
+        `;
+    }
+}
+
+// ============= SLIDES FUNCTIONALITY =============
+async function updateLessonSelects() {
+    try {
+        const response = await apiRequest('/lessons');
+        const lessons = response.data.lessons;
+        
+        // Update slide lesson select
+        const slideSelect = document.getElementById('slideLessonSelect');
+        slideSelect.innerHTML = '<option value="">اختر الدرس</option>';
+        
+        // Update quiz lesson select
+        const quizSelect = document.getElementById('quizLessonId');
+        quizSelect.innerHTML = '<option value="">اختر الدرس</option>';
+        
+        lessons.forEach(lesson => {
+            const option = `<option value="${lesson.id}">${lesson.titleAr || lesson.title}</option>`;
+            slideSelect.innerHTML += option;
+            quizSelect.innerHTML += option;
+        });
+    } catch (error) {
+        console.error('Failed to load lessons:', error);
+    }
+}
+
+async function generateSlides() {
+    const lessonId = document.getElementById('slideLessonSelect').value || currentLesson?.id;
+    
+    if (!lessonId) {
+        showNotification('يرجى اختيار الدرس أولاً', 'error');
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        const response = await apiRequest(`/lessons/${lessonId}/slides?theme=default&generateVoice=false`);
+        currentSlides = response.data.slides;
+        currentSlideIndex = 0;
+        
+        displaySlide();
+        document.getElementById('slideNavigation').classList.remove('hidden');
+        
+        showNotification('تم توليد الشرائح بنجاح!', 'success');
+    } catch (error) {
+        showNotification('فشل توليد الشرائح', 'error');
+    }
+    
+    hideLoading();
+}
+
+async function generateWithVoice() {
+    const lessonId = document.getElementById('slideLessonSelect').value || currentLesson?.id;
+    
+    if (!lessonId) {
+        showNotification('يرجى اختيار الدرس أولاً', 'error');
+        return;
+    }
+    
+    showLoading();
+    showNotification('جاري توليد الشرائح مع الصوت... قد يستغرق هذا بعض الوقت', 'info');
+    
+    try {
+        const response = await apiRequest(`/lessons/${lessonId}/slides?theme=default&generateVoice=true&generateTeaching=true`);
+        currentSlides = response.data.slides;
+        currentSlideIndex = 0;
+        
+        displaySlide();
+        document.getElementById('slideNavigation').classList.remove('hidden');
+        
+        showNotification('تم توليد الشرائح مع الصوت بنجاح!', 'success');
+    } catch (error) {
+        showNotification('فشل توليد الشرائح', 'error');
+    }
+    
+    hideLoading();
+}
+
+async function generateSlidesForLesson(lessonId) {
+    // Switch to slides tab
+    switchTab('slides');
+    
+    // Set lesson in select
+    document.getElementById('slideLessonSelect').value = lessonId;
+    
+    // Generate slides
+    generateSlides();
+}
+
+function displaySlide() {
+    if (currentSlides.length === 0) return;
+    
+    const slide = currentSlides[currentSlideIndex];
+    const container = document.getElementById('slideContainer');
+    
+    // Display slide HTML
+    container.innerHTML = slide.html;
+    
+    // Update navigation
+    document.getElementById('currentSlide').textContent = currentSlideIndex + 1;
+    document.getElementById('totalSlides').textContent = currentSlides.length;
+    
+    // Play audio if available
+    if (slide.audioUrl) {
+        const audio = new Audio(slide.audioUrl);
+        audio.play().catch(e => console.log('Audio play failed:', e));
+    }
+}
+
+function nextSlide() {
+    if (currentSlideIndex < currentSlides.length - 1) {
+        currentSlideIndex++;
+        displaySlide();
+    }
+}
+
+function previousSlide() {
+    if (currentSlideIndex > 0) {
+        currentSlideIndex--;
+        displaySlide();
+    }
+}
+
+async function startQuizForLesson(lessonId) {
+    // Switch to quiz tab
+    switchTab('quiz');
+    
+    // Set lesson in select
+    document.getElementById('quizLessonId').value = lessonId;
+    
+    // Start quiz
+    startQuiz();
+}
+
+// ============= WEBSOCKET FUNCTIONALITY =============
+function connectWebSocket() {
+    if (socket && socket.connected) {
+        showNotification('WebSocket متصل بالفعل', 'info');
+        return;
+    }
+    
+    socket = io(WS_URL, {
+        transports: ['websocket'],
+        auth: {
+            token: TOKEN
+        }
+    });
+    
+    // Connection events
+    socket.on('connect', () => {
+        console.log('✅ WebSocket connected');
+        updateWSStatus(true);
+        addWSLog('Connected to server');
+        
+        // Authenticate
+        socket.emit('authenticate', { token: TOKEN });
+    });
+    
+    socket.on('disconnect', () => {
+        console.log('❌ WebSocket disconnected');
+        updateWSStatus(false);
+        addWSLog('Disconnected from server');
+    });
+    
+    socket.on('error', (error) => {
+        console.error('WebSocket error:', error);
+        addWSLog(`Error: ${error.message || error}`);
+    });
+    
+    // Authentication events
+    socket.on('authenticated', (data) => {
+        console.log('✅ Authenticated:', data);
+        addWSLog(`Authenticated as user: ${data.userId}`);
+        showNotification('تم الاتصال بـ WebSocket', 'success');
+    });
+    
+    // Teaching events
+    socket.on('teaching_ready', (data) => {
+        console.log('Teaching ready:', data);
+        addWSLog('Teaching script ready');
+        
+        if (data.audioUrl) {
+            const audio = new Audio(data.audioUrl);
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+    });
+    
+    // Slide events
+    socket.on('slide_ready', (data) => {
+        console.log('Slide ready:', data);
+        addWSLog('Slide generated');
+        
+        if (data.html) {
+            const container = document.getElementById('slideContainer');
+            container.innerHTML = data.html;
+        }
+    });
+    
+    // Voice events
+    socket.on('voice_ready', (data) => {
+        console.log('Voice ready:', data);
+        addWSLog('Voice generated');
+        
+        if (data.audioUrl) {
+            const audio = new Audio(data.audioUrl);
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+    });
+    
+    // Chat events
+    socket.on('ai_response', (data) => {
+        console.log('AI response:', data);
+        addChatMessage(data.message, 'assistant');
+    });
+    
+    // Status events
+    socket.on('generation_progress', (data) => {
+        console.log('Generation progress:', data);
+        addWSLog(`Progress: ${data.progress}%`);
+    });
+    
+    socket.on('generation_complete', (data) => {
+        console.log('Generation complete:', data);
+        addWSLog('Generation completed');
+        showNotification('تم الإنتهاء من التوليد!', 'success');
+    });
+    
+    socket.on('generation_error', (data) => {
+        console.error('Generation error:', data);
+        addWSLog(`Error: ${data.error}`);
+        showNotification('فشل التوليد: ' + data.error, 'error');
+    });
+}
+
+function updateWSStatus(connected) {
+    const icon = document.getElementById('wsStatusIcon');
+    const text = document.getElementById('wsStatusText');
+    const status = document.getElementById('wsStatus');
+    
+    if (connected) {
+        icon.className = 'w-3 h-3 bg-green-500 rounded-full ml-2';
+        text.textContent = 'متصل';
+        status.className = 'mb-6 p-4 rounded-lg bg-green-100';
+    } else {
+        icon.className = 'w-3 h-3 bg-red-500 rounded-full ml-2';
+        text.textContent = 'غير متصل';
+        status.className = 'mb-6 p-4 rounded-lg bg-red-100';
+    }
+}
+
+function addWSLog(message) {
+    const log = document.getElementById('wsLog');
+    const entry = document.createElement('div');
+    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+}
+
+function testSlideGeneration() {
+    if (!socket || !socket.connected) {
+        showNotification('يرجى الاتصال بـ WebSocket أولاً', 'error');
+        return;
+    }
+    
+    socket.emit('request_slide', {
+        slideContent: {
+            type: 'title',
+            title: 'اختبار توليد الشرائح',
+            subtitle: 'شريحة تجريبية'
+        },
+        slideNumber: 0,
+        theme: 'default',
+        generateVoice: true,
+        generateTeaching: true
+    });
+    
+    addWSLog('Requesting slide generation...');
+}
+
+function testTeachingAssistant() {
+    if (!socket || !socket.connected) {
+        showNotification('يرجى الاتصال بـ WebSocket أولاً', 'error');
+        return;
+    }
+    
+    socket.emit('generate_teaching_script', {
+        slideContent: {
+            type: 'content',
+            title: 'درس تجريبي',
+            content: 'هذا محتوى تجريبي للاختبار'
+        },
+        lessonId: currentLesson?.id || 'test-lesson',
+        options: {
+            generateVoice: true,
+            voiceStyle: 'friendly',
+            paceSpeed: 'normal',
+            useAnalogies: true
+        }
+    });
+    
+    addWSLog('Requesting teaching script...');
+}
+
+// ============= UTILITY FUNCTIONS =============
+function showLoading() {
+    document.getElementById('loadingModal').classList.remove('hidden');
+}
+
+function hideLoading() {
+    document.getElementById('loadingModal').classList.add('hidden');
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-20 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 fade-in`;
+    
+    // Set color based on type
+    switch (type) {
+        case 'success':
+            notification.className += ' bg-green-500 text-white';
+            break;
+        case 'error':
+            notification.className += ' bg-red-500 text-white';
+            break;
+        case 'warning':
+            notification.className += ' bg-yellow-500 text-white';
+            break;
+        default:
+            notification.className += ' bg-blue-500 text-white';
+    }
+    
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+</script>
+
+</body>
+</html>

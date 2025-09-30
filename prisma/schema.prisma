@@ -1,0 +1,800 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"  // نبدأ بـ SQLite ونغيرها لـ PostgreSQL لاحقاً
+  url      = env("DATABASE_URL")
+}
+
+// ============= USER & AUTH MODELS =============
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String
+  firstName       String
+  lastName        String
+  role            UserRole  @default(STUDENT)
+  grade           Int?      // الصف الدراسي (6، 9، 12)
+  isActive        Boolean   @default(true)
+  emailVerified   Boolean   @default(false)
+  lastLogin       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  // Gamification fields (moved from Profile for easier access)
+  points          Int       @default(0)    // نقاط الإنجاز
+  lastActiveDate  DateTime?                // آخر يوم نشط
+
+  // Relations
+  profile         Profile?
+  progress        Progress[]
+  chatMessages    ChatMessage[]
+  quizAttempts    QuizAttempt[]
+  subscription    Subscription?
+  achievements    UserAchievement[]
+  rewards         ClaimedReward[]
+  challenges      DailyChallenge[]
+  learningSessions LearningSession[]
+  studentContext  StudentContext?      //  NEW
+  emotionalStates EmotionalState[]     //  NEW
+
+  @@index([email])
+  @@index([role])
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+model Profile {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  avatar          String?
+  bio             String?
+  phoneNumber     String?
+  dateOfBirth     DateTime?
+  preferences     String?   // JSON string for user preferences
+  
+  // Gamification fields
+  points          Int       @default(0)    // نقاط التقدم
+  level           Int       @default(1)    // المستوى الحالي
+  coins           Int       @default(0)    // عملات افتراضية
+  streak          Int       @default(0)    // سلسلة الأيام
+  lastActive      DateTime?               // آخر نشاط
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+}
+
+// =============  STUDENT CONTEXT & EMOTIONAL INTELLIGENCE =============
+
+model StudentContext {
+  id                    String    @id @default(uuid())
+  userId                String    @unique
+  
+  // Learning Profile
+  learningStyle         String?   // visual, auditory, kinesthetic, reading
+  preferredDifficulty   String    @default("medium") // easy, medium, hard
+  currentLevel          Int       @default(1)
+  
+  // Performance Metrics
+  totalSessions         Int       @default(0)
+  totalLearningTime     Int       @default(0) // بالدقائق
+  correctAnswers        Int       @default(0)
+  wrongAnswers          Int       @default(0)
+  averageScore          Float     @default(0)
+  streakCount           Int       @default(0)
+  longestStreak         Int       @default(0)
+  
+  // Emotional Tracking
+  currentMood           String    @default("neutral") // happy, neutral, frustrated, confused, tired
+  lastMoodUpdate        DateTime  @default(now())
+  averageConfidence     Float     @default(70)
+  averageEngagement     Float     @default(80)
+  
+  // Topics & Skills
+  strugglingTopics      String?   // JSON array للمواضيع الصعبة
+  masteredTopics        String?   // JSON array للمواضيع المتقنة
+  recentTopics          String?   // JSON array آخر المواضيع
+  strengths             String?   // JSON array نقاط القوة
+  weaknesses            String?   // JSON array نقاط الضعف
+  
+  // Interaction History
+  lastInteractionTime   DateTime  @default(now())
+  lastActiveDate        DateTime? // آخر يوم نشط (for streak tracking)
+  questionsAsked        Int       @default(0)
+  hintsRequested        Int       @default(0)
+  breaksRequested       Int       @default(0)
+  sessionsCompleted     Int       @default(0)
+  
+  // Personalization Data
+  conversationHistory   String?   // JSON array آخر المحادثات
+  preferences           String?   // JSON تفضيلات التعلم
+  achievementPreferences String?  // JSON تفضيلات الإنجازات
+  notificationPreferences String? // JSON تفضيلات التنبيهات
+  dailyTarget           Int       @default(3) // الهدف اليومي للدروس
+  
+  // Parent Communication
+  parentNotified        Boolean   @default(false)
+  lastParentReport      DateTime?
+  parentReportFrequency String    @default("weekly") // daily, weekly, monthly
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relations
+  user                  User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([currentMood])
+  @@index([lastInteractionTime])
+}
+
+model EmotionalState {
+  id              String    @id @default(uuid())
+  userId          String
+  lessonId        String?
+  
+  // Emotional Data
+  mood            String    // happy, neutral, frustrated, confused, tired
+  confidence      Int       // 0-100
+  engagement      Int       // 0-100
+  stress          Int       @default(0) // 0-100
+  
+  // Indicators
+  indicators      String?   // JSON array للمؤشرات
+  triggers        String?   // JSON array للمحفزات
+  
+  // Response
+  systemResponse  String?   // JSON للاستجابة النظام
+  suggestions     String?   // JSON للاقتراحات
+  
+  // Timestamps
+  detectedAt      DateTime  @default(now())
+  resolvedAt      DateTime?
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([detectedAt])
+  @@index([mood])
+}
+
+// ============= EDUCATIONAL CONTENT MODELS =============
+
+model Subject {
+  id              String    @id @default(uuid())
+  name            String    // "رياضيات", "علوم", "تاريخ"
+  nameEn          String    // "Mathematics", "Science", "History"
+  nameAr          String?   // الاسم بالعربية
+  grade           Int       // 6, 9, 12
+  description     String?
+  icon            String?
+  order           Int       @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  units           Unit[]
+  
+  @@unique([name, grade])
+  @@index([grade])
+}
+
+model Unit {
+  id              String    @id @default(uuid())
+  subjectId       String
+  title           String
+  titleEn         String
+  titleAr         String?   // العنوان بالعربية
+  description     String?
+  order           Int       @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  subject         Subject   @relation(fields: [subjectId], references: [id])
+  lessons         Lesson[]
+  
+  @@index([subjectId])
+}
+
+model Lesson {
+  id              String    @id @default(uuid())
+  unitId          String
+  title           String
+  titleEn         String
+  titleAr         String?   // العنوان بالعربية
+  description     String?
+  order           Int       @default(0)
+  duration        Int?      // مدة الدرس بالدقائق
+  difficulty      Difficulty @default(MEDIUM)
+  isPublished     Boolean   @default(false)
+  publishedAt     DateTime?
+  
+  // New fields for RAG
+  summary         String?   // ملخص الدرس
+  keyPoints       String?   // JSON array للنقاط الرئيسية
+  estimatedMinutes Int     @default(45)
+  
+  //  Emotional Adaptation Fields
+  emotionalTones  String?   // JSON array للنبرات العاطفية المناسبة
+  motivationalMessages String? // JSON array للرسائل التحفيزية
+  difficultyVariations String? // JSON للتنويعات حسب المستوى
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  unit            Unit      @relation(fields: [unitId], references: [id])
+  content         Content?
+  video           Video?
+  questions       Question[]
+  progress        Progress[]
+  chatMessages    ChatMessage[]
+  concepts        Concept[]
+  examples        Example[]
+  formulas        Formula[]
+  ragContent      RAGContent[]
+  learningSessions LearningSession[]
+  visualElements  VisualElement[]
+  interactiveComponents InteractiveComponent[]
+  contentQuality  ContentQuality?
+  quizAttempts    QuizAttempt[]
+  
+  @@index([unitId])
+  @@index([isPublished])
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model Content {
+  id              String    @id @default(uuid())
+  lessonId        String    @unique
+  fullText        String    // المحتوى الكامل للدرس
+  summary         String?   // ملخص الدرس
+  keyPoints       String?   // JSON array للنقاط الرئيسية
+  examples        String?   // JSON array للأمثلة
+  exercises       String?   // JSON array للتمارين
+  
+  // حقول جديدة للمحتوى المحسن
+  enrichedContent String?   // JSON للمحتوى المحسن بالكامل
+  lastEnrichedAt  DateTime? // آخر تحسين
+  enrichmentLevel Int       @default(0) // مستوى التحسين 0-10
+  
+  //  Context-Aware Content
+  adaptiveContent String?   // JSON للمحتوى المتكيف حسب المستوى
+  emotionalSupport String?  // JSON للدعم العاطفي
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  embeddings      ContentEmbedding[]
+  
+  @@index([lessonId])
+  @@index([enrichmentLevel])
+}
+
+// ============= NEW ENRICHMENT MODELS =============
+
+// جدول العناصر المرئية
+model VisualElement {
+  id              String    @id @default(uuid())
+  lessonId        String
+  type            String    // diagram, chart, infographic, mindmap, 3d-model, animation
+  title           String
+  description     String?
+  specifications  String?   // JSON object للمواصفات
+  url             String?   // رابط الصورة أو الملف
+  alternativeText String?   // للإتاحة Accessibility
+  order           Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  
+  @@index([lessonId])
+}
+
+// جدول المكونات التفاعلية
+model InteractiveComponent {
+  id              String    @id @default(uuid())
+  lessonId        String
+  type            String    // calculator, simulator, quiz, drag-drop, timeline, map
+  title           String
+  instructions    String?
+  config          String?   // JSON configuration
+  isActive        Boolean   @default(true)
+  order           Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  
+  @@index([lessonId])
+}
+
+// جدول جودة المحتوى
+model ContentQuality {
+  id                String    @id @default(uuid())
+  lessonId          String    @unique
+  contentScore      Int       @default(0)     // 0-100
+  pedagogicalScore  Int       @default(0)     // 0-100
+  engagementScore   Int       @default(0)     // 0-100
+  overallScore      Int       @default(0)     // 0-100
+  lastAssessedAt    DateTime  @default(now())
+  assessmentDetails String?   // JSON with detailed assessment
+  
+  // Relations
+  lesson            Lesson    @relation(fields: [lessonId], references: [id])
+  
+  @@index([lessonId])
+  @@index([overallScore])
+}
+
+// ============= RAG SYSTEM MODELS =============
+
+model Concept {
+  id              String    @id @default(uuid())
+  name            String
+  nameAr          String
+  description     String
+  lessonId        String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  
+  @@index([lessonId])
+}
+
+// Example model محدث ليتوافق مع نظام التحسين
+model Example {
+  id              String    @id @default(uuid())
+  lessonId        String
+  problem         String    // العنوان أو المشكلة
+  solution        String    // الحل أو الوصف
+  order           Int       @default(0)
+  
+  // حقول إضافية للمحتوى المحسن
+  type            String?   // real-world, mathematical, scientific, historical
+  difficulty      String?   // basic, intermediate, advanced
+  visualAid       String?   // وصف للعنصر المرئي المصاحب
+  relatedConcept  String?   // المفهوم المرتبط
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  
+  @@index([lessonId])
+}
+
+model Formula {
+  id              String    @id @default(uuid())
+  expression      String
+  description     String
+  lessonId        String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  
+  @@index([lessonId])
+}
+
+model RAGContent {
+  id              String    @id @default(uuid())
+  lessonId        String
+  content         String
+  contentType     String    // LESSON_FULL, CONCEPT, EXAMPLE, etc.
+  embedding       String    // JSON string for embedding vector
+  metadata        String    // JSON string for additional metadata
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  
+  @@index([lessonId])
+  @@index([contentType])
+}
+
+// ============= VECTOR EMBEDDINGS FOR RAG =============
+
+model ContentEmbedding {
+  id              String    @id @default(uuid())
+  contentId       String
+  chunkIndex      Int       // رقم الجزء في المحتوى
+  chunkText       String    // النص الأصلي للجزء
+  embedding       String    // Vector as JSON array [768 dimensions]
+  metadata        String?   // JSON metadata
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  content         Content   @relation(fields: [contentId], references: [id])
+  
+  @@unique([contentId, chunkIndex])
+  @@index([contentId])
+}
+
+// ============= VIDEO GENERATION =============
+
+model Video {
+  id              String    @id @default(uuid())
+  lessonId        String    @unique
+  status          VideoStatus @default(PENDING)
+  url             String?
+  thumbnailUrl    String?
+  duration        Int?      // بالثواني
+  script          String?   // JSON script للفيديو
+  slides          String?   // JSON slides data
+  audioUrl        String?
+  processingData  String?   // JSON processing metadata
+  error           String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  
+  @@index([lessonId])
+  @@index([status])
+}
+
+enum VideoStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ============= QUIZ & ASSESSMENT =============
+
+model Question {
+  id              String    @id @default(uuid())
+  lessonId        String
+  type            QuestionType
+  question        String
+  options         String?   // JSON array for MCQ options
+  correctAnswer   String
+  explanation     String?
+  points          Int       @default(1)
+  difficulty      Difficulty @default(MEDIUM)
+  order           Int       @default(0)
+
+  // New fields for RAG
+  tags            String?   // JSON array للـ tags
+  isActive        Boolean   @default(true)
+
+  // ✅ حقول جديدة للـ Question Bank
+  isDynamic       Boolean   @default(false)  // هل السؤال dynamic أم static
+
+  // ✅ تتبع الاستخدام
+  timesUsed       Int       @default(0)      // كم مرة تم استخدام السؤال
+  lastUsedAt      DateTime?                  // آخر مرة تم استخدامه
+  successRate     Float     @default(0)      // نسبة النجاح (0-100)
+
+  // حقول جديدة للمحتوى المحسن
+  learningObjective String?  // الهدف التعليمي المرتبط
+  hints           String?   // JSON array للتلميحات
+  stepByStepSolution String? // JSON array للحل خطوة بخطوة
+
+  // Emotional Support Fields
+  encouragementMessages String? // JSON array للرسائل التشجيعية
+  errorFeedback   String?   // JSON للتعامل مع الأخطاء
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  attempts        QuizAttemptAnswer[]
+
+  @@index([lessonId])
+  @@index([difficulty])
+  @@index([isActive])
+  @@index([timesUsed])  // ✅ جديد
+}
+
+enum QuestionType {
+  MCQ           // Multiple Choice
+  TRUE_FALSE    // True/False
+  FILL_BLANK    // Fill in the blank
+  SHORT_ANSWER  // Short answer
+  PROBLEM       // Mathematical/Scientific problems
+  ESSAY         // Essay question
+}
+
+model QuizAttempt {
+  id              String    @id @default(uuid())
+  userId          String
+  lessonId        String
+  score           Float?
+  totalQuestions  Int
+  correctAnswers  Int       @default(0)
+  timeSpent       Int?      // بالثواني
+  completedAt     DateTime?
+
+  //  Emotional Context
+  emotionalState  String?   // JSON للحالة العاطفية أثناء الاختبار
+  confidenceLevel Float     @default(0) // 0-100
+  stressLevel     Float     @default(0) // 0-100
+
+  // ✅ حقل جديد لتخزين معلومات الاختبار الشامل
+  metadata        String?   // JSON لتخزين معلومات إضافية
+  // مثال: {"type": "comprehensive", "lessonsIncluded": ["id1", "id2"]}
+
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  answers         QuizAttemptAnswer[]
+
+  @@index([userId])
+  @@index([lessonId])
+}
+
+model QuizAttemptAnswer {
+  id              String    @id @default(uuid())
+  attemptId       String
+  questionId      String
+  userAnswer      String
+  isCorrect       Boolean
+  timeSpent       Int?      // بالثواني
+  
+  //  Learning Analytics
+  confidence      Int       @default(0) // 0-100 مدى ثقة الطالب
+  hintsUsed       Int       @default(0) // عدد التلميحات المستخدمة
+  attempts        Int       @default(1) // عدد المحاولات
+  
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  attempt         QuizAttempt @relation(fields: [attemptId], references: [id])
+  question        Question    @relation(fields: [questionId], references: [id])
+  
+  @@unique([attemptId, questionId])
+}
+
+// ============= PROGRESS TRACKING =============
+
+model Progress {
+  id              String    @id @default(uuid())
+  userId          String
+  lessonId        String
+  status          ProgressStatus @default(NOT_STARTED)
+  completionRate  Float     @default(0) // 0-100
+  videoWatched    Boolean   @default(false)
+  quizCompleted   Boolean   @default(false)
+  lastAccessedAt  DateTime  @default(now())
+  completedAt     DateTime?
+  timeSpent       Int       @default(0) // بالثواني
+  
+  // New fields for auto-save
+  lastVideoTime   Float     @default(0)     // آخر وقت في الفيديو
+  lastScrollPosition Float  @default(0)     // موضع التمرير
+  lastSectionId   String?                   // آخر قسم
+  
+  //  Emotional Journey
+  emotionalJourney String?  // JSON array للرحلة العاطفية
+  struggledSections String? // JSON array للأقسام الصعبة
+  masteredSections String?  // JSON array للأقسام المتقنة
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+// ============= AI CHAT (ENHANCED) =============
+
+model ChatMessage {
+  id              String    @id @default(uuid())
+  userId          String
+  lessonId        String?
+  sessionId       String?   // ربط بجلسة التعلم
+  
+  // محتوى الرسالة
+  userMessage     String    @default("")
+  aiResponse      String    @default("")
+  
+  // معلومات إضافية
+  role            String    @default("USER")
+  metadata        String?   // JSON for suggestions, context, etc.
+  rating          Int?      // تقييم المستخدم للرد (1-5)
+  feedback        String?   // ملاحظات المستخدم
+  
+  //  Emotional Context
+  emotionalContext String?  // JSON للسياق العاطفي
+  wasHelpful      Boolean?  // هل كان الرد مفيداً
+  
+  // Stream support
+  isStreaming     Boolean   @default(false)
+  responseTime    Int?      // وقت الاستجابة بالـ ms
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+  lesson          Lesson?   @relation(fields: [lessonId], references: [id])
+  
+  @@index([userId])
+  @@index([lessonId])
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+// ============= GAMIFICATION MODELS (ENHANCED) =============
+
+model UserAchievement {
+  id              String    @id @default(uuid())
+  userId          String
+  achievementId   String
+  unlockedAt      DateTime  @default(now())
+  points          Int
+  
+  //  Achievement Details
+  title           String
+  description     String
+  icon            String?
+  category        String?   // academic, social, consistency, mastery
+  rarity          String    @default("common") // common, rare, epic, legendary
+  progress        Float     @default(100) // للإنجازات التدريجية
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([category])
+}
+
+model ClaimedReward {
+  id              String    @id @default(uuid())
+  userId          String
+  rewardType      String
+  points          Int
+  claimedAt       DateTime  @default(now())
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+}
+
+model DailyChallenge {
+  id              String    @id @default(uuid())
+  userId          String
+  challengeId     String
+  date            DateTime
+  completed       Boolean   @default(false)
+  progress        Float     @default(0)
+  
+  //  Challenge Details
+  difficulty      String    @default("medium")
+  points          Int       @default(10)
+  bonusPoints     Int       @default(0)
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@unique([userId, challengeId, date])
+  @@index([userId])
+}
+
+// ============= LEARNING SESSION MODEL (ENHANCED) =============
+
+model LearningSession {
+  id              String    @id @default(uuid())
+  userId          String
+  lessonId        String
+  socketId        String?   // Socket ID الحالي
+  
+  // Session State
+  currentSlide    Int       @default(0)
+  totalSlides     Int       @default(0)
+  isActive        Boolean   @default(true)
+  
+  // Progress Tracking
+  startedAt       DateTime  @default(now())
+  lastActivityAt  DateTime  @default(now())
+  completedAt     DateTime?
+  
+  //  Enhanced Session Data
+  emotionalStates String?   // JSON array للحالات العاطفية خلال الجلسة
+  interactionCount Int      @default(0)
+  questionsAsked  Int       @default(0)
+  hintsRequested  Int       @default(0)
+  breaksTaken     Int       @default(0)
+  focusScore      Float     @default(0) // 0-100
+  
+  // Content State (JSON)
+  chatHistory     String?   // JSON array of messages
+  slideHistory    String?   // JSON array of visited slides
+  userPreferences String?   // JSON object for settings
+  teachingScripts String?   // JSON array للسكريبتات التعليمية
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+  lesson          Lesson    @relation(fields: [lessonId], references: [id])
+  
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@index([isActive])
+}
+
+// ============= SUBSCRIPTION =============
+
+model Subscription {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  plan            SubscriptionPlan @default(FREE)
+  status          SubscriptionStatus @default(ACTIVE)
+  startDate       DateTime  @default(now())
+  endDate         DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([status])
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+  EXPIRED
+}

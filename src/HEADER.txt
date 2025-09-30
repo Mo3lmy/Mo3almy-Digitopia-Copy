@@ -1,0 +1,25 @@
+/**
+ * =============================================================================
+ * Mualimi Platform - Smart Education System
+ * مُعَلِّمي - منصة التعليم الذكية
+ * =============================================================================
+ *
+ * Copyright (c) 2025 Mualimi Platform. All Rights Reserved.
+ * جميع الحقوق محفوظة © 2025
+ *
+ * PROPRIETARY AND CONFIDENTIAL
+ * ملكية خاصة وسرية
+ *
+ * This code is provided for evaluation purposes only as part of the
+ * Digitopia 2025 Competition submission.
+ *
+ * هذا الكود مُقدم لأغراض التقييم فقط ضمن مسابقة Digitopia 2025
+ *
+ * Unauthorized copying, distribution, or use is strictly prohibited.
+ * النسخ أو التوزيع أو الاستخدام غير المصرح به محظور تماماً.
+ *
+ * Contact: molmyplatform@gmail.com | +201080590386
+ *
+ * Tested by Testination – ITI Software Testing Team ✅
+ * =============================================================================
+ */

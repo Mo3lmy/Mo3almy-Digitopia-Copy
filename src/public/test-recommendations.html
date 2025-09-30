@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار recommendations</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1e1e1e;
+            color: #fff;
+        }
+        .test {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background: #2a2a2a;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background: #2563eb; }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+    </style>
+</head>
+<body>
+    <h1>اختبار recommendations endpoint</h1>
+    <p>افتح http://localhost:3000 وسجل الدخول أولاً</p>
+
+    <div class="test">
+        <button onclick="testRecommendations()">اختبار recommendations</button>
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        async function testRecommendations() {
+            const result = document.getElementById('result');
+            result.textContent = 'جاري الاختبار...';
+
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+
+            if (!token) {
+                result.textContent = 'لا يوجد token. الرجاء تسجيل الدخول أولاً على http://localhost:3000';
+                result.className = 'result error';
+                return;
+            }
+
+            let userId = '94a09d58-d1e3-49d8-be6e-51c45b450d58';
+            try {
+                if (user) {
+                    userId = JSON.parse(user).id;
+                }
+            } catch (e) {}
+
+            try {
+                const response = await fetch(
+                    `http://localhost:3001/api/v1/student-context/${userId}/recommendations`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    }
+                );
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    result.textContent = `✅ نجح الاختبار!
+
+Status: ${response.status}
+
+البيانات المستلمة:
+- Suggestions: ${data.data.suggestions?.length || 0} اقتراحات
+- Next Lessons: ${data.data.nextLessons?.length || 0} دروس
+- Practice Areas: ${data.data.practiceAreas?.length || 0} مجالات
+- Tips: ${data.data.tips?.length || 0} نصائح
+
+التفاصيل:
+${JSON.stringify(data, null, 2)}`;
+                    result.className = 'result success';
+                } else {
+                    result.textContent = `❌ فشل: ${response.status}
+${JSON.stringify(data, null, 2)}`;
+                    result.className = 'result error';
+                }
+            } catch (error) {
+                result.textContent = `❌ خطأ: ${error.message}`;
+                result.className = 'result error';
+            }
+        }
+
+        // Test on load
+        window.onload = () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                console.log('Token found. Click the button to test.');
+            } else {
+                console.log('No token. Please login at http://localhost:3000 first.');
+            }
+        };
+    </script>
+</body>
+</html>

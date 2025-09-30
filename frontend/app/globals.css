@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Amiri:wght@400;700&display=swap');
+
+:root {
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-500: #3b82f6;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
+
+  --secondary-50: #f0fdf4;
+  --secondary-500: #22c55e;
+  --secondary-600: #16a34a;
+
+  --accent-50: #fff7ed;
+  --accent-500: #f97316;
+  --accent-600: #ea580c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  direction: rtl;
+  font-family: 'Cairo', sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  min-height: 100vh;
+}
+
+@layer components {
+  .edu-card {
+    @apply bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100;
+  }
+
+  .edu-gradient {
+    @apply bg-gradient-to-br from-primary-500 to-primary-600;
+  }
+
+  .edu-text-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent;
+  }
+
+  .edu-hover {
+    @apply hover:scale-[1.02] hover:shadow-lg transition-all duration-300;
+  }
+
+  .edu-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .edu-progress-ring {
+    @apply relative inline-flex items-center justify-center;
+  }
+
+  .edu-glow {
+    @apply relative before:absolute before:inset-0 before:rounded-lg before:bg-primary-400 before:blur-xl before:opacity-20;
+  }
+}
+
+@layer utilities {
+  .animation-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animation-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -468px 0; }
+    100% { background-position: 468px 0; }
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 936px 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .edu-success-gradient {
+    @apply bg-gradient-to-r from-success-500 to-success-600;
+  }
+
+  .edu-motivation-gradient {
+    @apply bg-gradient-to-r from-motivation-500 to-motivation-600;
+  }
+}

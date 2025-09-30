@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>اختبار عرض الشرائح</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .controls {
+            width: 300px;
+            padding: 20px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .preview {
+            flex: 1;
+            padding: 20px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        select, input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #slideFrame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.2);
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <h2>🎨 اختبار الستايلات</h2>
+
+            <label>الصف الدراسي:</label>
+            <select id="grade">
+                <option value="3">الصف الثالث (ابتدائي)</option>
+                <option value="6">الصف السادس (ابتدائي)</option>
+                <option value="8">الصف الثامن (إعدادي)</option>
+                <option value="11">الصف الحادي عشر (ثانوي)</option>
+            </select>
+
+            <label>نوع الشريحة:</label>
+            <select id="slideType">
+                <option value="title">شريحة العنوان</option>
+                <option value="content">شريحة المحتوى</option>
+                <option value="bullet">شريحة النقاط</option>
+                <option value="quiz">شريحة الاختبار</option>
+            </select>
+
+            <button onclick="testDirectAPI()">🔬 اختبار API مباشر</button>
+            <button onclick="testBlobURL()">📦 اختبار Blob URL</button>
+            <button onclick="testSrcDoc()">📝 اختبار SrcDoc</button>
+            <button onclick="testDataURL()">🔗 اختبار Data URL</button>
+
+            <hr>
+            <h3>📊 النتائج:</h3>
+            <div id="results" style="font-size: 12px; color: #666;">
+                جاهز للاختبار...
+            </div>
+        </div>
+
+        <div class="preview">
+            <iframe id="slideFrame"></iframe>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+
+        async function testDirectAPI() {
+            log('🔬 Testing Direct API...');
+            const grade = document.getElementById('grade').value;
+            const type = document.getElementById('slideType').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/test/slides/preview/${type}?grade=${grade}`);
+                const html = await response.text();
+
+                log(`✅ Received HTML: ${html.length} chars`);
+                log(`🎨 Has styles: ${html.includes('<style>')}`);
+
+                // عرض باستخدام Blob URL
+                const blob = new Blob([html], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                document.getElementById('slideFrame').src = url;
+
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBlobURL() {
+            log('📦 Testing Blob URL...');
+            const html = await generateTestHTML();
+
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            document.getElementById('slideFrame').src = url;
+
+            log(`✅ Blob URL created: ${url.substring(0, 50)}...`);
+        }
+
+        async function testSrcDoc() {
+            log('📝 Testing SrcDoc...');
+            const html = await generateTestHTML();
+
+            document.getElementById('slideFrame').srcdoc = html;
+            log(`✅ SrcDoc applied: ${html.length} chars`);
+        }
+
+        async function testDataURL() {
+            log('🔗 Testing Data URL...');
+            const html = await generateTestHTML();
+
+            const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+            document.getElementById('slideFrame').src = dataUrl;
+
+            log(`✅ Data URL created: ${dataUrl.length} chars`);
+        }
+
+        async function generateTestHTML() {
+            const grade = parseInt(document.getElementById('grade').value);
+            const type = document.getElementById('slideType').value;
+
+            // محاكاة HTML من الخادم
+            const isKids = grade <= 6;
+            const isTeen = grade <= 9;
+
+            return `
+                <!DOCTYPE html>
+                <html dir="rtl" lang="ar">
+                <head>
+                    <meta charset="UTF-8">
+                    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body {
+                            font-family: 'Tajawal', sans-serif;
+                            direction: rtl;
+                            height: 100vh;
+                            background: ${isKids ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' :
+                                         isTeen ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' :
+                                                 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'};
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        }
+                        .content {
+                            text-align: center;
+                            color: white;
+                            padding: 40px;
+                            ${isKids ? 'animation: bounce 2s infinite;' : ''}
+                        }
+                        h1 {
+                            font-size: ${isKids ? '4em' : '3em'};
+                            margin-bottom: 20px;
+                            ${isKids ? 'text-shadow: 3px 3px 0 rgba(0,0,0,0.2);' : ''}
+                        }
+                        ${isKids ? `
+                            @keyframes bounce {
+                                0%, 100% { transform: translateY(0); }
+                                50% { transform: translateY(-20px); }
+                            }
+                            .emoji {
+                                font-size: 5em;
+                                animation: spin 3s linear infinite;
+                            }
+                            @keyframes spin {
+                                from { transform: rotate(0deg); }
+                                to { transform: rotate(360deg); }
+                            }
+                        ` : ''}
+                    </style>
+                </head>
+                <body>
+                    <div class="content">
+                        <h1>شريحة ${type === 'title' ? 'العنوان' : 'المحتوى'}</h1>
+                        <p>مصممة للصف ${grade}</p>
+                        ${isKids ? '<div class="emoji">🚀</div>' : ''}
+                    </div>
+                </body>
+                </html>
+            `;
+        }
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const time = new Date().toLocaleTimeString('ar-EG');
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : '#666';
+            results.innerHTML = `<div style="color: ${color}">[${time}] ${message}</div>` + results.innerHTML;
+        }
+
+        // اختبار أولي
+        testDirectAPI();
+    </script>
+</body>
+</html>

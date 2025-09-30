@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>اختبار الحل النهائي</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .test-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2em;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .test-section h2 {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        button.danger {
+            background: #f44336;
+        }
+        button.warning {
+            background: #ff9800;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #333;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #4CAF50;
+            color: white;
+        }
+        .status.error {
+            background: #f44336;
+            color: white;
+        }
+        .status.warning {
+            background: #ff9800;
+            color: white;
+        }
+        .iframe-container {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 اختبار الحل النهائي للشرائح</h1>
+
+        <div class="test-section">
+            <h2>1️⃣ اختبار HTML Escaping</h2>
+            <button onclick="testEscapedHTML()">اختبار HTML Escaped</button>
+            <button onclick="testNormalHTML()" class="warning">اختبار HTML عادي</button>
+            <button onclick="testPartialHTML()" class="danger">اختبار HTML جزئي</button>
+            <div id="escapingResult" class="result-box">جاهز للاختبار...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>2️⃣ اختبار API Backend</h2>
+            <button onclick="testBackendAPI()">جلب شريحة من Backend</button>
+            <div id="apiResult" class="result-box">جاهز لاختبار API...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>3️⃣ معاينة الشريحة</h2>
+            <div class="iframe-container">
+                <iframe id="previewFrame"></iframe>
+            </div>
+        </div>
+
+        <div id="status" class="status" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Test escaped HTML
+        function testEscapedHTML() {
+            const escapedHTML = `
+                &lt;!DOCTYPE html&gt;
+                &lt;html dir="rtl" lang="ar"&gt;
+                &lt;head&gt;
+                    &lt;style&gt;
+                        body {
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100vh;
+                            font-family: 'Tajawal', sans-serif;
+                        }
+                        h1 { font-size: 3em; }
+                    &lt;/style&gt;
+                &lt;/head&gt;
+                &lt;body&gt;
+                    &lt;h1&gt;شريحة Escaped&lt;/h1&gt;
+                &lt;/body&gt;
+                &lt;/html&gt;
+            `;
+
+            log('escapingResult', '📝 Testing escaped HTML...');
+
+            // Decode HTML
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = escapedHTML;
+            const decodedHTML = textarea.value;
+
+            log('escapingResult', `✅ Decoded: ${decodedHTML.substring(0, 100)}...`);
+
+            // Display in iframe
+            displayHTML(decodedHTML);
+            showStatus('success', 'HTML فك تشفيره وعرضه بنجاح!');
+        }
+
+        // Test normal HTML
+        function testNormalHTML() {
+            const normalHTML = `
+                <!DOCTYPE html>
+                <html dir="rtl" lang="ar">
+                <head>
+                    <style>
+                        body {
+                            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                            color: white;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100vh;
+                            font-family: 'Cairo', sans-serif;
+                        }
+                        h1 {
+                            font-size: 3em;
+                            animation: pulse 2s infinite;
+                        }
+                        @keyframes pulse {
+                            0%, 100% { transform: scale(1); }
+                            50% { transform: scale(1.05); }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div>
+                        <h1>شريحة عادية</h1>
+                        <p>مع حركات CSS</p>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            log('escapingResult', '📄 Testing normal HTML...');
+            displayHTML(normalHTML);
+            showStatus('success', 'HTML عادي يعمل بشكل مثالي!');
+        }
+
+        // Test partial HTML
+        function testPartialHTML() {
+            const partialHTML = `
+                <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+                            height: 100vh; display: flex; align-items: center;
+                            justify-content: center; color: white;">
+                    <h1 style="font-size: 3em;">شريحة جزئية</h1>
+                    <p>بدون DOCTYPE أو HTML tags</p>
+                </div>
+            `;
+
+            log('escapingResult', '⚠️ Testing partial HTML (will be wrapped)...');
+
+            // Wrap in full document
+            const fullHTML = wrapInDocument(partialHTML);
+            displayHTML(fullHTML);
+            showStatus('warning', 'HTML جزئي تم لفه في document كامل');
+        }
+
+        // Test Backend API
+        async function testBackendAPI() {
+            log('apiResult', '🔄 Fetching from Backend...');
+
+            try {
+                const response = await fetch('http://localhost:3001/api/test/slides/preview/title?grade=6');
+                const html = await response.text();
+
+                log('apiResult', `✅ Received ${html.length} characters`);
+                log('apiResult', `📊 Has DOCTYPE: ${html.includes('<!DOCTYPE')}`);
+                log('apiResult', `🎨 Has styles: ${html.includes('<style>')}`);
+
+                displayHTML(html);
+                showStatus('success', 'تم جلب الشريحة من Backend بنجاح!');
+            } catch (error) {
+                log('apiResult', `❌ Error: ${error.message}`, 'error');
+                showStatus('error', 'فشل الاتصال بـ Backend');
+            }
+        }
+
+        // Helper: Wrap partial HTML in document
+        function wrapInDocument(content) {
+            return `
+                <!DOCTYPE html>
+                <html dir="rtl" lang="ar">
+                <head>
+                    <meta charset="UTF-8">
+                    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body {
+                            font-family: 'Tajawal', sans-serif;
+                            direction: rtl;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${content}
+                </body>
+                </html>
+            `;
+        }
+
+        // Display HTML in iframe
+        function displayHTML(html) {
+            const iframe = document.getElementById('previewFrame');
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(html);
+            doc.close();
+        }
+
+        // Log messages
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const time = new Date().toLocaleTimeString('ar-EG');
+            const color = type === 'error' ? '#f44336' : '#333';
+            element.innerHTML += `<div style="color: ${color}; margin: 5px 0;">[${time}] ${message}</div>`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        // Show status
+        function showStatus(type, message) {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            status.style.display = 'block';
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 3000);
+        }
+
+        // Initial test
+        window.onload = () => {
+            log('escapingResult', '🚀 جاهز للاختبار - اضغط على الأزرار');
+            log('apiResult', '⏳ في انتظار اختبار API...');
+        };
+    </script>
+</body>
+</html>

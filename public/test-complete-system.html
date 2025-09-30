@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 اختبار شامل - النسخة المصححة</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #764ba2;
+            margin-bottom: 10px;
+        }
+        
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .status-item {
+            background: #f3f4f6;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .status-connected {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status-disconnected {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .btn-success {
+            background: #10b981;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .result-box {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .log-viewer {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 8px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .log-entry {
+            padding: 3px 0;
+        }
+        
+        .log-error { color: #ef4444; }
+        .log-success { color: #10b981; }
+        .log-warning { color: #f59e0b; }
+        .log-info { color: #3b82f6; }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        
+        .slide-preview {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 300px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🧪 اختبار شامل للنظام - النسخة المصححة</h1>
+            <div class="status-bar">
+                <span class="status-item" id="connectionStatus">غير متصل</span>
+                <span class="status-item" id="authStatus">غير مسجل</span>
+                <span class="status-item" id="lessonStatus">بدون درس</span>
+                <span class="status-item" id="time"></span>
+            </div>
+        </div>
+
+        <!-- Test Sections -->
+        <div class="test-grid">
+            
+            <!-- Connection & Auth -->
+            <div class="test-section">
+                <h2>🔌 الاتصال والمصادقة</h2>
+                
+                <input type="text" class="input-field" id="serverUrl" 
+                       value="http://localhost:3000" placeholder="Server URL">
+                
+                <button class="btn" onclick="testConnection()" id="connectBtn">
+                    اتصل بالخادم
+                </button>
+                
+                <button class="btn btn-success" onclick="testAuth()" id="authBtn" disabled>
+                    تسجيل دخول تجريبي
+                </button>
+                
+                <button class="btn btn-danger" onclick="disconnect()">
+                    قطع الاتصال
+                </button>
+                
+                <div class="result-box" id="connectionResult">
+                    في انتظار الاتصال...
+                </div>
+            </div>
+
+            <!-- Lessons -->
+            <div class="test-section">
+                <h2>📚 الدروس</h2>
+                
+                <select class="input-field" id="lessonSelect">
+                    <option value="">اختر درس...</option>
+                </select>
+                
+                <button class="btn btn-warning" onclick="loadLessons()" id="loadBtn" disabled>
+                    تحميل الدروس
+                </button>
+                
+                <button class="btn" onclick="joinLesson()" id="joinBtn" disabled>
+                    الانضمام للدرس
+                </button>
+                
+                <div class="result-box" id="lessonResult">
+                    في انتظار تحميل الدروس...
+                </div>
+            </div>
+
+            <!-- Slides & Teaching -->
+            <div class="test-section">
+                <h2>🎨 الشرائح والتدريس</h2>
+                
+                <button class="btn" onclick="testSlide()" id="slideBtn" disabled>
+                    توليد شريحة
+                </button>
+                
+                <button class="btn btn-success" onclick="testTeaching()" id="teachBtn" disabled>
+                    سكريبت تعليمي
+                </button>
+                
+                <button class="btn btn-warning" onclick="testVoice()" id="voiceBtn" disabled>
+                    توليد صوت
+                </button>
+                
+                <div class="result-box" id="slideResult">
+                    في انتظار الانضمام لدرس...
+                </div>
+            </div>
+
+            <!-- RAG & Chat -->
+            <div class="test-section">
+                <h2>🤖 الذكاء الاصطناعي</h2>
+                
+                <input type="text" class="input-field" id="question" 
+                       placeholder="اسأل سؤال..." value="ما هو قانون فيثاغورس؟">
+                
+                <button class="btn" onclick="askQuestion()" id="askBtn" disabled>
+                    اسأل
+                </button>
+                
+                <button class="btn btn-success" onclick="getSummary()" id="summaryBtn" disabled>
+                    ملخص الدرس
+                </button>
+                
+                <div class="result-box" id="aiResult">
+                    في انتظار السؤال...
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Slide Preview -->
+        <div class="test-section" style="margin-top: 20px;">
+            <h2>👁️ معاينة الشريحة</h2>
+            <div class="slide-preview" id="slidePreview">
+                <p style="text-align: center; color: #9ca3af;">
+                    سيظهر محتوى الشريحة هنا...
+                </p>
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="test-section">
+            <h2>📋 سجل الأحداث</h2>
+            <button class="btn btn-danger" onclick="clearLogs()">مسح السجل</button>
+            <div class="log-viewer" id="logs"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Global variables
+        let socket = null;
+        let authToken = null;
+        let currentLessonId = null;
+        let isConnected = false;
+        let isAuthenticated = false;
+
+        // Update time
+        setInterval(() => {
+            document.getElementById('time').textContent = 
+                new Date().toLocaleTimeString('ar-EG');
+        }, 1000);
+
+        // Logging
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const time = new Date().toLocaleTimeString('ar-EG');
+            entry.textContent = `[${time}] ${message}`;
+            logs.appendChild(entry);
+            logs.scrollTop = logs.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+            log('تم مسح السجل', 'info');
+        }
+
+        function updateStatus(element, text, isSuccess = false) {
+            const el = document.getElementById(element);
+            el.textContent = text;
+            el.className = `status-item ${isSuccess ? 'status-connected' : ''}`;
+        }
+
+        function showResult(element, content) {
+            document.getElementById(element).innerHTML = content;
+        }
+
+        // Connection
+        async function testConnection() {
+            const url = document.getElementById('serverUrl').value;
+            const btn = document.getElementById('connectBtn');
+            btn.disabled = true;
+            
+            log('🔌 جاري الاتصال...', 'info');
+            
+            try {
+                // Test HTTP
+                const res = await fetch(`${url}/health`);
+                const data = await res.json();
+                
+                if (data.status === 'ok') {
+                    log('✅ الخادم يعمل', 'success');
+                    
+                    // Connect WebSocket
+                    connectWebSocket(url);
+                } else {
+                    throw new Error('Server not ready');
+                }
+            } catch (error) {
+                log(`❌ فشل الاتصال: ${error.message}`, 'error');
+                btn.disabled = false;
+            }
+        }
+
+        function connectWebSocket(url) {
+            if (socket) {
+                socket.disconnect();
+            }
+            
+            socket = io(url, {
+                transports: ['websocket', 'polling']
+            });
+            
+            socket.on('connect', () => {
+                isConnected = true;
+                log('✅ WebSocket متصل', 'success');
+                updateStatus('connectionStatus', 'متصل', true);
+                
+                document.getElementById('authBtn').disabled = false;
+                document.getElementById('connectBtn').disabled = false;
+            });
+            
+            socket.on('disconnect', () => {
+                isConnected = false;
+                log('❌ انقطع الاتصال', 'error');
+                updateStatus('connectionStatus', 'غير متصل');
+            });
+            
+            socket.on('welcome', (data) => {
+                log(`👋 ${data.message}`, 'success');
+                showResult('connectionResult', `Socket ID: ${data.socketId}`);
+            });
+            
+            socket.on('authenticated', (data) => {
+                isAuthenticated = true;
+                authToken = data.token || 'test-token';
+                
+                log(`✅ تم التسجيل: ${data.userName}`, 'success');
+                updateStatus('authStatus', data.email, true);
+                
+                // Enable controls
+                document.getElementById('loadBtn').disabled = false;
+                document.getElementById('askBtn').disabled = false;
+            });
+            
+            socket.on('joined_lesson', (data) => {
+                currentLessonId = data.lessonId;
+                log(`✅ انضممت للدرس: ${data.lessonTitle}`, 'success');
+                updateStatus('lessonStatus', data.lessonTitle, true);
+                
+                // Enable controls
+                document.getElementById('slideBtn').disabled = false;
+                document.getElementById('teachBtn').disabled = false;
+                document.getElementById('voiceBtn').disabled = false;
+                document.getElementById('summaryBtn').disabled = false;
+                
+                showResult('lessonResult', 
+                    `الدرس: ${data.lessonTitle}<br>Session: ${data.sessionId}`
+                );
+            });
+            
+            socket.on('slide_ready', (data) => {
+                log('✅ الشريحة جاهزة', 'success');
+                document.getElementById('slidePreview').innerHTML = data.html;
+                
+                if (data.audioUrl) {
+                    showResult('slideResult', 
+                        `✅ الشريحة جاهزة<br>🔊 <a href="${data.audioUrl}" target="_blank">الصوت</a>`
+                    );
+                }
+            });
+            
+            socket.on('chat_response', (data) => {
+                log('💬 رد الشات', 'success');
+                showResult('aiResult', data.response);
+            });
+            
+            socket.on('error', (error) => {
+                log(`❌ خطأ: ${error.message}`, 'error');
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+            
+            isConnected = false;
+            isAuthenticated = false;
+            currentLessonId = null;
+            
+            updateStatus('connectionStatus', 'غير متصل');
+            updateStatus('authStatus', 'غير مسجل');
+            updateStatus('lessonStatus', 'بدون درس');
+            
+            log('🔌 تم قطع الاتصال', 'warning');
+        }
+
+        // Authentication
+        function testAuth() {
+            if (!socket) {
+                log('⚠️ غير متصل', 'warning');
+                return;
+            }
+            
+            log('🔐 جاري تسجيل الدخول...', 'info');
+            socket.emit('authenticate', { token: 'test-token' });
+        }
+
+        // Lessons
+        async function loadLessons() {
+            log('📚 جاري تحميل الدروس...', 'info');
+            
+            try {
+                // Try the test endpoint
+                const res = await fetch('http://localhost:3000/api/v1/lessons/test');
+                const data = await res.json();
+                
+                if (data.success && data.data) {
+                    const lessons = Array.isArray(data.data) ? data.data : data.data.lessons || [];
+                    
+                    const select = document.getElementById('lessonSelect');
+                    select.innerHTML = '<option value="">اختر درس...</option>';
+                    
+                    lessons.forEach(lesson => {
+                        const option = document.createElement('option');
+                        option.value = lesson.id;
+                        option.textContent = lesson.titleAr || lesson.title;
+                        select.appendChild(option);
+                    });
+                    
+                    log(`✅ تم تحميل ${lessons.length} درس`, 'success');
+                    showResult('lessonResult', `تم تحميل ${lessons.length} درس`);
+                    
+                    document.getElementById('joinBtn').disabled = false;
+                }
+            } catch (error) {
+                log(`❌ فشل التحميل: ${error.message}`, 'error');
+            }
+        }
+
+        function joinLesson() {
+            const lessonId = document.getElementById('lessonSelect').value;
+            
+            if (!lessonId) {
+                log('⚠️ اختر درس أولاً', 'warning');
+                return;
+            }
+            
+            log(`📚 الانضمام للدرس: ${lessonId}`, 'info');
+            socket.emit('join_lesson', { lessonId });
+        }
+
+        // Slides & Teaching
+        function testSlide() {
+            if (!currentLessonId) {
+                log('⚠️ انضم لدرس أولاً', 'warning');
+                return;
+            }
+            
+            log('🎨 توليد شريحة...', 'info');
+            
+            socket.emit('request_slide', {
+                type: 'content',
+                title: 'شريحة اختبار',
+                content: 'هذا محتوى تجريبي للاختبار',
+                theme: 'default',
+                generateTeaching: true,
+                lessonId: currentLessonId
+            });
+        }
+
+        function testTeaching() {
+            if (!currentLessonId) {
+                log('⚠️ انضم لدرس أولاً', 'warning');
+                return;
+            }
+            
+            log('👨‍🏫 توليد سكريبت تعليمي...', 'info');
+            
+            socket.emit('generate_teaching_script', {
+                lessonId: currentLessonId,
+                slideContent: {
+                    title: 'المعادلات',
+                    content: 'حل المعادلات من الدرجة الأولى'
+                },
+                studentGrade: 9
+            });
+            
+            socket.once('teaching_script_ready', (data) => {
+                log('✅ السكريبت جاهز', 'success');
+                showResult('slideResult', data.script.substring(0, 200) + '...');
+            });
+        }
+
+        function testVoice() {
+            log('🔊 توليد صوت...', 'info');
+            
+            socket.emit('generate_slide_voice', {
+                slideContent: {
+                    type: 'content',
+                    title: 'اختبار الصوت',
+                    content: 'هذا اختبار لنظام توليد الصوت'
+                }
+            });
+            
+            socket.once('voice_ready', (data) => {
+                log('✅ الصوت جاهز', 'success');
+                showResult('slideResult', `🔊 <a href="${data.audioUrl}" target="_blank">استمع</a>`);
+            });
+        }
+
+        // AI & RAG
+        function askQuestion() {
+            const question = document.getElementById('question').value;
+            
+            if (!question) {
+                log('⚠️ اكتب سؤال', 'warning');
+                return;
+            }
+            
+            log(`🤖 السؤال: ${question}`, 'info');
+            
+            socket.emit('chat_message', {
+                message: question,
+                lessonId: currentLessonId
+            });
+        }
+
+        function getSummary() {
+            if (!currentLessonId) {
+                log('⚠️ انضم لدرس أولاً', 'warning');
+                return;
+            }
+            
+            log('📄 طلب ملخص...', 'info');
+            
+            socket.emit('get_lesson_summary', { lessonId: currentLessonId });
+            
+            socket.once('lesson_summary', (data) => {
+                log('✅ الملخص جاهز', 'success');
+                showResult('aiResult', data.summary);
+            });
+        }
+
+        // Initialize
+        window.onload = () => {
+            log('🚀 النظام جاهز', 'success');
+            log('💡 اضغط "اتصل بالخادم" للبدء', 'info');
+        };
+    </script>
+</body>
+</html>
